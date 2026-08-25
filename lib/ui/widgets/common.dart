@@ -104,9 +104,6 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Le liseré passe par une bordure de décoration plutôt que par une colonne
-    // étirée : une Row en `stretch` réclamerait une hauteur infinie dans une
-    // liste, alors que la bordure se contente de la hauteur du contenu.
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -116,7 +113,7 @@ class AppCard extends StatelessWidget {
           decoration: accent == null
               ? null
               : BoxDecoration(
-                  border: Border(left: BorderSide(color: accent!, width: 4)),
+                  color: accent!.withValues(alpha: 0.05),
                 ),
           child: child,
         ),

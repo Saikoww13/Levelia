@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/category.dart';
@@ -7,11 +8,7 @@ import '../../state/providers.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 
-/// Ligne d'habitude de l'écran du jour.
-///
-/// Un appui fait tourner l'état : à faire → réussi → manqué → à faire.
-/// Les trois états sont distincts à dessein : « manqué » est une information
-/// utile, différente de « pas encore renseigné ».
+/// Ligne d'habitude — canal de la session du jour.
 class HabitTile extends StatelessWidget {
   const HabitTile({
     super.key,
@@ -38,22 +35,41 @@ class HabitTile extends StatelessWidget {
       _ => (Icons.radio_button_unchecked, theme.colorScheme.outline),
     };
 
+    final xpText = entry.isDone && entry.log != null
+        ? '+${entry.log!.xpAwarded}'
+        : entry.isMissed && habitude.penalty != HabitPenalty.none
+        ? '-${habitude.penalty.xp}'
+        : '+${habitude.difficulty.xp}';
+
+    final xpColor = entry.isDone
+        ? AppTheme.success
+        : entry.isMissed
+        ? AppTheme.missed
+        : couleur;
+
     return AppCard(
       onTap: onTap,
       accent: couleur,
-      padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 11, 14, 11),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onTap,
-            icon: Icon(icone, size: 30, color: couleurEtat),
-            tooltip: entry.isDone
-                ? 'Marquer comme manqué'
-                : entry.isMissed
-                ? 'Effacer le pointage'
-                : 'Marquer ${habitude.doneLabel.toLowerCase()}',
+          // State toggle icon
+          GestureDetector(
+            onTap: onTap,
+            child: Icon(icone, size: 28, color: couleurEtat),
           ),
-          Gaps.w8,
+          Gaps.w12,
+          // Category dot
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: couleur,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Habit name + meta
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,7 +80,7 @@ class HabitTile extends StatelessWidget {
                     if (habitude.isNegative) ...[
                       Icon(
                         Icons.block,
-                        size: 14,
+                        size: 13,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                       Gaps.w4,
@@ -74,29 +90,30 @@ class HabitTile extends StatelessWidget {
                         habitude.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           decoration: entry.isMissed
                               ? TextDecoration.lineThrough
                               : null,
                           color: entry.isMissed
                               ? theme.colorScheme.onSurfaceVariant
-                              : null,
+                              : theme.colorScheme.onSurface,
                         ),
                       ),
                     ),
                   ],
                 ),
-                Gaps.h4,
+                const SizedBox(height: 3),
                 Wrap(
                   spacing: 6,
-                  runSpacing: 4,
+                  runSpacing: 3,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       habitude.schedule.label,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.2,
                       ),
                     ),
                     if (entry.streak.current > 0)
@@ -106,30 +123,29 @@ class HabitTile extends StatelessWidget {
               ],
             ),
           ),
-          Gaps.w8,
+          Gaps.w12,
+          // XP readout
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                entry.isDone && entry.log != null
-                    ? '+${entry.log!.xpAwarded}'
-                    : entry.isMissed && habitude.penalty != HabitPenalty.none
-                    ? '-${habitude.penalty.xp}'
-                    : '+${habitude.difficulty.xp}',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: entry.isDone
-                      ? AppTheme.success
-                      : entry.isMissed
-                      ? AppTheme.missed
-                      : couleur,
+                xpText,
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: xpColor,
+                  height: 1.0,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
               Text(
                 'XP',
-                style: theme.textTheme.labelSmall?.copyWith(
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                   color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.6,
                 ),
               ),
             ],

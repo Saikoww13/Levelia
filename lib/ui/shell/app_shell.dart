@@ -96,8 +96,8 @@ class _AppShellState extends State<AppShell> {
         destinations: [
           for (final d in _destinations)
             NavigationDestination(
-              icon: Icon(d.icon),
-              selectedIcon: Icon(d.selectedIcon),
+              icon: Icon(d.icon, size: 22),
+              selectedIcon: Icon(d.selectedIcon, size: 22),
               label: d.label,
             ),
         ],

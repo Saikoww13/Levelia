@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/engine/leveling.dart';
@@ -18,16 +19,16 @@ class CategoryAvatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: category.color.withValues(alpha: 0.18),
+        color: category.color.withValues(alpha: 0.16),
         shape: BoxShape.circle,
-        border: Border.all(color: category.color.withValues(alpha: 0.45)),
+        border: Border.all(color: category.color.withValues(alpha: 0.35)),
       ),
-      child: Text(category.emoji, style: TextStyle(fontSize: size * 0.46)),
+      child: Text(category.emoji, style: TextStyle(fontSize: size * 0.44)),
     );
   }
 }
 
-/// Barre de progression d'XP, avec le niveau à gauche et le reste à parcourir.
+/// Barre de progression XP — style tableau de bord analytique.
 class XpBar extends StatelessWidget {
   const XpBar({
     super.key,
@@ -39,11 +40,7 @@ class XpBar extends StatelessWidget {
 
   final LevelInfo info;
   final Color color;
-
-  /// Texte affiché au-dessus de la barre. Par défaut, le rang.
   final String? label;
-
-  /// Version resserrée, pour les listes.
   final bool compact;
 
   @override
@@ -56,19 +53,31 @@ class XpBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              'Niv. ${info.level}',
-              style: (compact
-                      ? theme.textTheme.labelMedium
-                      : theme.textTheme.titleSmall)
-                  ?.copyWith(fontWeight: FontWeight.w700, color: color),
+            // Level badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: color.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                'NIV ${info.level}',
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: compact ? 11 : 12,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  letterSpacing: 0.8,
+                ),
+              ),
             ),
-            Gaps.w8,
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label ?? info.rank,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.2,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -76,8 +85,10 @@ class XpBar extends StatelessWidget {
             Text(
               auMax
                   ? '${info.totalXp} XP'
-                  : '${info.xpIntoLevel} / ${info.xpForNextLevel} XP',
-              style: theme.textTheme.labelSmall?.copyWith(
+                  : '${info.xpIntoLevel}/${info.xpForNextLevel}',
+              style: GoogleFonts.barlowCondensed(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
                 color: theme.colorScheme.onSurfaceVariant,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -85,21 +96,79 @@ class XpBar extends StatelessWidget {
           ],
         ),
         SizedBox(height: compact ? 6 : 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: info.progress,
-            minHeight: compact ? 6 : 10,
-            backgroundColor: color.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation(color),
-          ),
+        _StatBar(
+          progress: info.progress,
+          color: color,
+          height: compact ? 6 : 10,
         ),
       ],
     );
   }
 }
 
-/// Grand médaillon de niveau, utilisé sur la fiche de profil.
+/// Barre de stat avec repères visuels à 25 / 50 / 75 %.
+class _StatBar extends StatelessWidget {
+  const _StatBar({
+    required this.progress,
+    required this.color,
+    this.height = 10,
+  });
+
+  final double progress;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        return SizedBox(
+          height: height,
+          child: Stack(
+            children: [
+              // Background track
+              Container(
+                width: width,
+                height: height,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(height / 2),
+                ),
+              ),
+              // Fill
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                width: (width * progress.clamp(0.0, 1.0)),
+                height: height,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(height / 2),
+                ),
+              ),
+              // Tick marks at 25 / 50 / 75 %
+              if (height >= 8)
+                for (final pct in [0.25, 0.50, 0.75])
+                  Positioned(
+                    left: width * pct - 0.5,
+                    child: Container(
+                      width: 1,
+                      height: height,
+                      color: progress > pct
+                          ? color.withValues(alpha: 0.3)
+                          : color.withValues(alpha: 0.18),
+                    ),
+                  ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Grand affichage de niveau pour la fiche de profil.
 class LevelMedallion extends StatelessWidget {
   const LevelMedallion({super.key, required this.info, required this.color});
 
@@ -111,38 +180,44 @@ class LevelMedallion extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      width: 116,
-      height: 116,
+      width: 120,
+      height: 120,
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Circular progress ring
           SizedBox(
-            width: 116,
-            height: 116,
+            width: 120,
+            height: 120,
             child: CircularProgressIndicator(
               value: info.progress,
-              strokeWidth: 9,
+              strokeWidth: 8,
               strokeCap: StrokeCap.round,
-              backgroundColor: color.withValues(alpha: 0.15),
+              backgroundColor: color.withValues(alpha: 0.12),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
+          // Level number — dominant stat
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'NIVEAU',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  letterSpacing: 1.4,
-                  color: theme.colorScheme.onSurfaceVariant,
+                '${info.level}',
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  height: 1.0,
+                  letterSpacing: -1,
                 ),
               ),
               Text(
-                '${info.level}',
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  height: 1,
+                info.rank.toUpperCase(),
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 1.6,
                 ),
               ),
             ],
@@ -153,7 +228,7 @@ class LevelMedallion extends StatelessWidget {
   }
 }
 
-/// Petite étiquette « 🔥 12 jours ».
+/// Pastille de série — icône flamme + nombre de jours.
 class StreakPill extends StatelessWidget {
   const StreakPill({super.key, required this.label, this.active = true});
 
@@ -168,17 +243,31 @@ class StreakPill extends StatelessWidget {
         : theme.colorScheme.onSurfaceVariant;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: couleur.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: couleur.withValues(alpha: 0.28)),
       ),
-      child: Text(
-        active ? '🔥 $label' : label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: couleur,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.local_fire_department,
+            size: 12,
+            color: couleur,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: GoogleFonts.barlowCondensed(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: couleur,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
