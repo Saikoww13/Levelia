@@ -84,6 +84,9 @@ charting à maintenir sur cinq plateformes.
 
 ## Démarrer
 
+**Flutter 3.38 minimum** (Dart 3.9+). Vérifie avec `flutter --version` ; si ta
+version est plus ancienne, `flutter upgrade` suffit.
+
 ```bash
 flutter pub get
 flutter run            # -d windows | macos | linux | <appareil Android/iOS>
@@ -95,6 +98,14 @@ Vérifications :
 flutter analyze        # 0 problème
 flutter test           # 39 tests
 ```
+
+Le projet est vérifié sur deux SDK : **Flutter 3.38.5 / Dart 3.10.4** et
+**Flutter 3.47.1 / Dart 3.13.1** — analyse propre, 39 tests verts et build
+release réussi sur les deux.
+
+> Si tu changes de version de Flutter sur un dépôt déjà compilé, lance
+> `flutter clean` avant : un cache de build laissé par l'autre version fait
+> échouer les tests sur un shader (`ink_sparkle.frag`) sans rapport avec le code.
 
 ---
 
