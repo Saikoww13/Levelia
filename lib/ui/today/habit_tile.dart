@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/category.dart';
-import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
@@ -35,10 +34,10 @@ class HabitTile extends StatelessWidget {
       _ => (Icons.radio_button_unchecked, theme.colorScheme.outline),
     };
 
-    final xpText = entry.isDone && entry.log != null
+    final xpText = entry.isDone
         ? '+${entry.log!.xpAwarded}'
-        : entry.isMissed && habitude.penalty != HabitPenalty.none
-        ? '-${habitude.penalty.xp}'
+        : entry.isMissed && entry.log!.xpPenaltyApplied > 0
+        ? '-${entry.log!.xpPenaltyApplied}'
         : '+${habitude.difficulty.xp}';
 
     final xpColor = entry.isDone

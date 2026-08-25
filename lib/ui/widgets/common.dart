@@ -85,6 +85,30 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// Étiquette de section de formulaire, affichée en majuscules.
+///
+/// À utiliser dans les formulaires éditeurs pour les titres de groupe (ex. :
+/// « CATÉGORIE », « RYTHME »). Assure une apparence uniforme quel que soit
+/// l'endroit où l'étiquette est placée.
+class FormLabel extends StatelessWidget {
+  const FormLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(
+        letterSpacing: 1.1,
+        fontWeight: FontWeight.w700,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
 /// Carte simple avec le rembourrage standard de l'application.
 class AppCard extends StatelessWidget {
   const AppCard({

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
+import '../widgets/common.dart';
 import '../widgets/sheet.dart';
 
 /// Ouvre l'éditeur d'habitude, en création ou en modification.
@@ -99,34 +100,38 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
     }
 
     setState(() => _enregistrement = true);
-    final controleur = ref.read(appControllerProvider.notifier);
-    final existante = widget.habit;
+    try {
+      final controleur = ref.read(appControllerProvider.notifier);
+      final existante = widget.habit;
 
-    if (existante == null) {
-      await controleur.addHabit(
-        title: _titre.text,
-        categoryId: _categorieId,
-        note: _note.text,
-        polarity: _polarite,
-        difficulty: _difficulte,
-        penalty: _penalite,
-        schedule: _planification,
-      );
-    } else {
-      await controleur.updateHabit(
-        existante.copyWith(
-          title: _titre.text.trim(),
-          note: _note.text.trim(),
+      if (existante == null) {
+        await controleur.addHabit(
+          title: _titre.text,
           categoryId: _categorieId,
+          note: _note.text,
           polarity: _polarite,
           difficulty: _difficulte,
           penalty: _penalite,
           schedule: _planification,
-        ),
-      );
-    }
+        );
+      } else {
+        await controleur.updateHabit(
+          existante.copyWith(
+            title: _titre.text.trim(),
+            note: _note.text.trim(),
+            categoryId: _categorieId,
+            polarity: _polarite,
+            difficulty: _difficulte,
+            penalty: _penalite,
+            schedule: _planification,
+          ),
+        );
+      }
 
-    if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _enregistrement = false);
+    }
   }
 
   @override
@@ -163,7 +168,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           ),
 
           Gaps.h24,
-          _Label('Catégorie'),
+          const FormLabel('Catégorie'),
           Gaps.h8,
           Wrap(
             spacing: 8,
@@ -182,7 +187,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           ),
 
           Gaps.h24,
-          _Label('Type'),
+          const FormLabel('Type'),
           Gaps.h8,
           SegmentedButton<HabitPolarity>(
             segments: const [
@@ -212,7 +217,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           ),
 
           Gaps.h24,
-          _Label('Exigence'),
+          const FormLabel('Exigence'),
           Gaps.h8,
           SegmentedButton<HabitDifficulty>(
             segments: [
@@ -228,7 +233,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           ),
 
           Gaps.h24,
-          _Label('Pénalité si manquée'),
+          const FormLabel('Pénalité si manquée'),
           Gaps.h8,
           SegmentedButton<HabitPenalty>(
             segments: [
@@ -256,7 +261,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           ),
 
           Gaps.h24,
-          _Label('Rythme'),
+          const FormLabel('Rythme'),
           Gaps.h8,
           SegmentedButton<ScheduleKind>(
             segments: const [
@@ -420,20 +425,3 @@ class _WeekdayPicker extends StatelessWidget {
   }
 }
 
-class _Label extends StatelessWidget {
-  const _Label(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        letterSpacing: 1.1,
-        fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}

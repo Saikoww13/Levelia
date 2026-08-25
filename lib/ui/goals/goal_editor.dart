@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/util/day.dart';
 import '../../domain/models/goal.dart';
 import '../../state/providers.dart';
+import '../widgets/common.dart';
 import '../widgets/sheet.dart';
 
 /// Ouvre l'éditeur d'objectif, en création ou en modification.
@@ -106,41 +107,45 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _enregistrement = true);
-    final controleur = ref.read(appControllerProvider.notifier);
-    final existant = widget.goal;
+    try {
+      final controleur = ref.read(appControllerProvider.notifier);
+      final existant = widget.goal;
 
-    final etapes = [
-      for (final brouillon in _etapes)
-        if (brouillon.controller.text.trim().isNotEmpty)
-          Milestone(
-            id: brouillon.id,
-            title: brouillon.controller.text.trim(),
-            done: brouillon.done,
-          ),
-    ];
+      final etapes = [
+        for (final brouillon in _etapes)
+          if (brouillon.controller.text.trim().isNotEmpty)
+            Milestone(
+              id: brouillon.id,
+              title: brouillon.controller.text.trim(),
+              done: brouillon.done,
+            ),
+      ];
 
-    if (existant == null) {
-      await controleur.addGoal(
-        title: _titre.text,
-        categoryId: _categorieId,
-        description: _description.text,
-        targetDate: _echeance,
-        milestoneTitles: etapes.map((m) => m.title).toList(),
-      );
-    } else {
-      await controleur.updateGoal(
-        existant.copyWith(
-          title: _titre.text.trim(),
-          description: _description.text.trim(),
+      if (existant == null) {
+        await controleur.addGoal(
+          title: _titre.text,
           categoryId: _categorieId,
+          description: _description.text,
           targetDate: _echeance,
-          clearTargetDate: _echeance == null,
-          milestones: etapes,
-        ),
-      );
-    }
+          milestoneTitles: etapes.map((m) => m.title).toList(),
+        );
+      } else {
+        await controleur.updateGoal(
+          existant.copyWith(
+            title: _titre.text.trim(),
+            description: _description.text.trim(),
+            categoryId: _categorieId,
+            targetDate: _echeance,
+            clearTargetDate: _echeance == null,
+            milestones: etapes,
+          ),
+        );
+      }
 
-    if (mounted) Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _enregistrement = false);
+    }
   }
 
   @override
@@ -176,14 +181,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
           ),
 
           Gaps.h24,
-          Text(
-            'CATÉGORIE',
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
+          const FormLabel('Catégorie'),
           Gaps.h8,
           Wrap(
             spacing: 8,
@@ -227,16 +225,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
           Gaps.h24,
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'ÉTAPES',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    letterSpacing: 1.1,
-                    fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
+              const Expanded(child: FormLabel('Étapes')),
               Text(
                 '+${Milestone.xpReward} XP chacune',
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -266,9 +255,8 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
                     onPressed: _etapes.length == 1
                         ? null
                         : () {
-                            final retiree = _etapes.removeAt(i);
-                            retiree.controller.dispose();
-                            setState(() {});
+                            _etapes[i].controller.dispose();
+                            setState(() => _etapes.removeAt(i));
                           },
                     icon: const Icon(Icons.remove_circle_outline),
                   ),
