@@ -46,6 +46,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
   late String _categorieId;
   late HabitPolarity _polarite;
   late HabitDifficulty _difficulte;
+  late HabitPenalty _penalite;
   late ScheduleKind _typePlanif;
   late Set<int> _jours;
   late int _foisParSemaine;
@@ -63,6 +64,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
     _categorieId = habitude?.categoryId ?? data.activeCategories.first.id;
     _polarite = habitude?.polarity ?? HabitPolarity.positive;
     _difficulte = habitude?.difficulty ?? HabitDifficulty.normal;
+    _penalite = habitude?.penalty ?? HabitPenalty.none;
 
     final planif = habitude?.schedule ?? const HabitSchedule.daily();
     _typePlanif = planif.kind;
@@ -107,6 +109,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
         note: _note.text,
         polarity: _polarite,
         difficulty: _difficulte,
+        penalty: _penalite,
         schedule: _planification,
       );
     } else {
@@ -117,6 +120,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
           categoryId: _categorieId,
           polarity: _polarite,
           difficulty: _difficulte,
+          penalty: _penalite,
           schedule: _planification,
         ),
       );
@@ -221,6 +225,34 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
             selected: {_difficulte},
             onSelectionChanged: (choix) =>
                 setState(() => _difficulte = choix.first),
+          ),
+
+          Gaps.h24,
+          _Label('Pénalité si manquée'),
+          Gaps.h8,
+          SegmentedButton<HabitPenalty>(
+            segments: [
+              for (final p in HabitPenalty.values)
+                ButtonSegment(
+                  value: p,
+                  label: Text(
+                    p == HabitPenalty.none ? p.label : '${p.label}\n-${p.xp} XP',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+            selected: {_penalite},
+            onSelectionChanged: (choix) =>
+                setState(() => _penalite = choix.first),
+          ),
+          Gaps.h8,
+          Text(
+            _penalite == HabitPenalty.none
+                ? 'Aucune XP n\'est retirée si tu manques cette habitude.'
+                : 'Manquer cette habitude te coûtera ${_penalite.xp} XP.',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
 
           Gaps.h24,

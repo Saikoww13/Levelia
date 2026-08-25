@@ -153,7 +153,10 @@ class _HabitRow extends ConsumerWidget {
                 ),
                 Gaps.h4,
                 Text(
-                  '${habit.schedule.label} · ${habit.difficulty.label}',
+                  habit.penalty == HabitPenalty.none
+                      ? '${habit.schedule.label} · ${habit.difficulty.label}'
+                      : '${habit.schedule.label} · ${habit.difficulty.label} · '
+                            '-${habit.penalty.xp} XP si manquée',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

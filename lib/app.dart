@@ -66,25 +66,28 @@ class _ErrorScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              Gaps.h16,
-              const Text(
-                'Impossible de charger tes données',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              Gaps.h8,
-              Text(message, textAlign: TextAlign.center),
-              Gaps.h24,
-              FilledButton(
-                onPressed: () => ref.invalidate(appControllerProvider),
-                child: const Text('Réessayer'),
-              ),
-            ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                Gaps.h16,
+                const Text(
+                  'Impossible de charger tes données',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                Gaps.h8,
+                Text(message, textAlign: TextAlign.center),
+                Gaps.h24,
+                FilledButton(
+                  onPressed: () => ref.invalidate(appControllerProvider),
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

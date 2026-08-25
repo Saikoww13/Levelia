@@ -14,6 +14,7 @@ class HabitLog {
     required this.day,
     required this.done,
     this.xpAwarded = 0,
+    this.xpPenaltyApplied = 0,
     this.markedAt,
   });
 
@@ -30,6 +31,12 @@ class HabitLog {
   /// avoir à recalculer un bonus de série qui a pu changer entre-temps.
   final int xpAwarded;
 
+  /// XP réellement retirée quand ce pointage a été marqué manqué.
+  ///
+  /// Mémorisée pour pouvoir la restituer à l'identique si l'on efface le
+  /// pointage, même si la pénalité de l'habitude a changé depuis.
+  final int xpPenaltyApplied;
+
   final DateTime? markedAt;
 
   /// Identité d'un pointage : une habitude, une journée.
@@ -38,12 +45,18 @@ class HabitLog {
   static String logKey(String habitId, DateTime day) =>
       '$habitId@${dayKey(day)}';
 
-  HabitLog copyWith({bool? done, int? xpAwarded, DateTime? markedAt}) {
+  HabitLog copyWith({
+    bool? done,
+    int? xpAwarded,
+    int? xpPenaltyApplied,
+    DateTime? markedAt,
+  }) {
     return HabitLog(
       habitId: habitId,
       day: day,
       done: done ?? this.done,
       xpAwarded: xpAwarded ?? this.xpAwarded,
+      xpPenaltyApplied: xpPenaltyApplied ?? this.xpPenaltyApplied,
       markedAt: markedAt ?? this.markedAt,
     );
   }
@@ -53,6 +66,7 @@ class HabitLog {
     'day': dayKey(day),
     'done': done,
     'xpAwarded': xpAwarded,
+    'xpPenaltyApplied': xpPenaltyApplied,
     'markedAt': markedAt?.toIso8601String(),
   };
 
@@ -61,6 +75,7 @@ class HabitLog {
     day: parseDayKey(json['day'] as String),
     done: json['done'] as bool? ?? false,
     xpAwarded: json['xpAwarded'] as int? ?? 0,
+    xpPenaltyApplied: json['xpPenaltyApplied'] as int? ?? 0,
     markedAt: DateTime.tryParse(json['markedAt'] as String? ?? ''),
   );
 }

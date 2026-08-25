@@ -40,6 +40,25 @@ enum HabitDifficulty {
       );
 }
 
+/// Pénalité d'XP appliquée quand une habitude est marquée manquée.
+enum HabitPenalty {
+  none(0, 'Aucune'),
+  light(10, 'Légère'),
+  moderate(15, 'Modérée'),
+  severe(25, 'Sévère');
+
+  const HabitPenalty(this.xp, this.label);
+
+  /// XP retirée quand la journée est marquée manquée. Zéro pour [none].
+  final int xp;
+  final String label;
+
+  static HabitPenalty fromKey(String? key) => HabitPenalty.values.firstWhere(
+    (p) => p.name == key,
+    orElse: () => HabitPenalty.none,
+  );
+}
+
 /// Manière dont une habitude est planifiée dans la semaine.
 enum ScheduleKind {
   /// Attendue tous les jours.
@@ -162,6 +181,7 @@ class Habit {
     this.note = '',
     this.polarity = HabitPolarity.positive,
     this.difficulty = HabitDifficulty.normal,
+    this.penalty = HabitPenalty.none,
     this.schedule = const HabitSchedule.daily(),
     this.archived = false,
     this.sortIndex = 0,
@@ -173,6 +193,7 @@ class Habit {
   final String categoryId;
   final HabitPolarity polarity;
   final HabitDifficulty difficulty;
+  final HabitPenalty penalty;
   final HabitSchedule schedule;
   final DateTime createdAt;
   final bool archived;
@@ -189,6 +210,7 @@ class Habit {
     String? categoryId,
     HabitPolarity? polarity,
     HabitDifficulty? difficulty,
+    HabitPenalty? penalty,
     HabitSchedule? schedule,
     bool? archived,
     int? sortIndex,
@@ -200,6 +222,7 @@ class Habit {
       categoryId: categoryId ?? this.categoryId,
       polarity: polarity ?? this.polarity,
       difficulty: difficulty ?? this.difficulty,
+      penalty: penalty ?? this.penalty,
       schedule: schedule ?? this.schedule,
       createdAt: createdAt,
       archived: archived ?? this.archived,
@@ -214,6 +237,7 @@ class Habit {
     'categoryId': categoryId,
     'polarity': polarity.name,
     'difficulty': difficulty.name,
+    'penalty': penalty.name,
     'schedule': schedule.toJson(),
     'createdAt': createdAt.toIso8601String(),
     'archived': archived,
@@ -227,6 +251,7 @@ class Habit {
     categoryId: json['categoryId'] as String,
     polarity: HabitPolarity.fromKey(json['polarity'] as String?),
     difficulty: HabitDifficulty.fromKey(json['difficulty'] as String?),
+    penalty: HabitPenalty.fromKey(json['penalty'] as String?),
     schedule: HabitSchedule.fromJson(
       (json['schedule'] as Map?)?.cast<String, dynamic>() ?? const {},
     ),

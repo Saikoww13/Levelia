@@ -72,7 +72,7 @@ class AppController extends AsyncNotifier<AppData> {
     if (existant.done) {
       return _markMissed(habit, jour, existant);
     }
-    return _clearLog(habit, jour);
+    return _clearLog(habit, jour, existant);
   }
 
   /// Force une habitude à l'état « réussi » (utilisé par la case à cocher).
@@ -86,7 +86,7 @@ class AppController extends AsyncNotifier<AppData> {
 
     if (done) {
       if (existant != null && existant.done) return null;
-      if (existant != null) await _clearLog(habit, jour);
+      if (existant != null) await _clearLog(habit, jour, existant);
       return _markDone(habit, jour);
     }
 
@@ -128,18 +128,21 @@ class AppController extends AsyncNotifier<AppData> {
     HabitLog existant,
   ) async {
     final repris = existant.xpAwarded;
+    final penalite = XpRules.penaltyFor(habit);
+    final delta = -repris - penalite;
 
     await _mutate((data) {
       final log = existant.copyWith(
         done: false,
         xpAwarded: 0,
+        xpPenaltyApplied: penalite,
         markedAt: DateTime.now(),
       );
-      return _withLog(_addXp(data, habit.categoryId, -repris), log);
+      return _withLog(_addXp(data, habit.categoryId, delta), log);
     });
 
     return XpEvent(
-      xpDelta: -repris,
+      xpDelta: delta,
       categoryId: habit.categoryId,
       leveledUp: false,
       newLevel: _levelOfCategory(habit.categoryId),
@@ -147,13 +150,28 @@ class AppController extends AsyncNotifier<AppData> {
     );
   }
 
-  Future<XpEvent?> _clearLog(Habit habit, DateTime jour) async {
+  /// Efface un pointage, en restituant toute pénalité qui avait été retirée.
+  Future<XpEvent?> _clearLog(
+    Habit habit,
+    DateTime jour,
+    HabitLog existant,
+  ) async {
+    final restitue = existant.xpPenaltyApplied;
+
     await _mutate((data) {
       final logs = Map<String, HabitLog>.from(data.logs)
         ..remove(HabitLog.logKey(habit.id, jour));
-      return data.copyWith(logs: logs);
+      return _addXp(data.copyWith(logs: logs), habit.categoryId, restitue);
     });
-    return null;
+
+    if (restitue == 0) return null;
+    return XpEvent(
+      xpDelta: restitue,
+      categoryId: habit.categoryId,
+      leveledUp: false,
+      newLevel: _levelOfCategory(habit.categoryId),
+      label: habit.title,
+    );
   }
 
   AppData _withLog(AppData data, HabitLog log) {
@@ -188,6 +206,7 @@ class AppController extends AsyncNotifier<AppData> {
     String note = '',
     HabitPolarity polarity = HabitPolarity.positive,
     HabitDifficulty difficulty = HabitDifficulty.normal,
+    HabitPenalty penalty = HabitPenalty.none,
     HabitSchedule schedule = const HabitSchedule.daily(),
   }) async {
     final habitude = Habit(
@@ -197,6 +216,7 @@ class AppController extends AsyncNotifier<AppData> {
       categoryId: categoryId,
       polarity: polarity,
       difficulty: difficulty,
+      penalty: penalty,
       schedule: schedule,
       createdAt: today(),
       sortIndex: _data.habits.length,

@@ -26,6 +26,12 @@ class XpRules {
     return habit.difficulty.xp + bonus;
   }
 
+  /// XP retirée quand une journée est marquée manquée.
+  ///
+  /// Contrairement au gain, ne bénéficie d'aucun bonus de série : rater une
+  /// longue série ne doit pas coûter plus cher que rater la première fois.
+  static int penaltyFor(Habit habit) => habit.penalty.xp;
+
   /// Décomposition lisible d'un gain, pour l'afficher à l'utilisateur.
   static ({int base, int bonus}) breakdown(
     Habit habit, {

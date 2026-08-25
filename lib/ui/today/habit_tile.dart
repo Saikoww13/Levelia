@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/category.dart';
+import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
@@ -113,10 +114,16 @@ class HabitTile extends StatelessWidget {
               Text(
                 entry.isDone && entry.log != null
                     ? '+${entry.log!.xpAwarded}'
+                    : entry.isMissed && habitude.penalty != HabitPenalty.none
+                    ? '-${habitude.penalty.xp}'
                     : '+${habitude.difficulty.xp}',
                 style: theme.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: entry.isDone ? AppTheme.success : couleur,
+                  color: entry.isDone
+                      ? AppTheme.success
+                      : entry.isMissed
+                      ? AppTheme.missed
+                      : couleur,
                 ),
               ),
               Text(
