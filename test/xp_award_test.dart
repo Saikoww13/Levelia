@@ -255,6 +255,45 @@ void main() {
       );
     });
 
+    test(
+      'régression : pénalité sévère sur catégorie vierge ne crée pas d\'XP',
+      () async {
+        // Reproduit exactement le bug signalé :
+        // catégorie neuve (0 XP), habitude facile (10 XP), pénalité sévère (25 XP).
+        // Avant le correctif, _markMissed stockait xpPenaltyApplied = 25 même si
+        // le clamp n'avait retiré que 0. _clearLog restituait 25 → XP créée de rien.
+        final (:container, controller: _) = _setup(baseAvecPenalite());
+        final controleur = await _ready(container);
+        final habit = container.read(appDataProvider).habits.first;
+        final jour = today();
+
+        // Étape 1 — marquer réussi : la catégorie gagne 10 XP.
+        await controleur.cycleHabit(habit, jour);
+        expect(container.read(appDataProvider).categoryById('c1')!.xp, 10);
+
+        // Étape 2 — marquer manqué : delta = -10 - 25 = -35, clampé à 0.
+        // La pénalité réellement prélevée est 0, pas 25.
+        await controleur.cycleHabit(habit, jour);
+        expect(container.read(appDataProvider).categoryById('c1')!.xp, 0);
+
+        final logManque = container.read(appDataProvider).logFor('h1', jour);
+        expect(
+          logManque?.xpPenaltyApplied,
+          0,
+          reason: 'xpPenaltyApplied doit refléter ce qui a été réellement prélevé, '
+              'pas la valeur nominale de la pénalité',
+        );
+
+        // Étape 3 — effacer : restitue xpPenaltyApplied = 0 → XP reste à 0.
+        await controleur.cycleHabit(habit, jour);
+        expect(
+          container.read(appDataProvider).categoryById('c1')!.xp,
+          0,
+          reason: 'effacer un pointage manqué ne doit jamais créer d\'XP',
+        );
+      },
+    );
+
     test('pénalité pleine quand l\'XP disponible est suffisante', () async {
       // Catégorie à 100 XP avant le pointage. Gain = 10 → XP = 110.
       // delta = -35 → XP = 75, aucun clamp.
