@@ -131,11 +131,18 @@ class AppController extends AsyncNotifier<AppData> {
     final penalite = XpRules.penaltyFor(habit);
     final delta = -repris - penalite;
 
+    // Pénalité réellement prélevée après bornage à 0 : si le delta total dépasse
+    // l'XP disponible, le clamp absorbe une partie de la pénalité nominale.
+    // On stocke la valeur effective pour que _clearLog restitue exactement autant.
+    final xpAvant = _data.categoryById(habit.categoryId)?.xp ?? 0;
+    final xpApres = (xpAvant + delta).clamp(0, 1 << 30);
+    final penaliteReelle = (-( xpApres - xpAvant) - repris).clamp(0, penalite);
+
     await _mutate((data) {
       final log = existant.copyWith(
         done: false,
         xpAwarded: 0,
-        xpPenaltyApplied: penalite,
+        xpPenaltyApplied: penaliteReelle,
         markedAt: DateTime.now(),
       );
       return _withLog(_addXp(data, habit.categoryId, delta), log);

@@ -188,6 +188,99 @@ void main() {
     });
   });
 
+  group('Pénalité XP', () {
+    // Habitude facile (10 XP) + pénalité sévère (25 XP) sur catégorie vierge.
+    // C'est exactement la configuration qui produisait le bug : la pénalité
+    // nominale (25) dépassait l'XP disponible (10), le clamp absorbait la
+    // différence, mais _markMissed enregistrait quand même 25. À l'effacement,
+    // _clearLog restituait 25 alors que seul 0 avait été prélevé.
+    AppData baseAvecPenalite() {
+      final b = _base();
+      return b.copyWith(
+        habits: [
+          b.habits.first.copyWith(
+            difficulty: HabitDifficulty.easy,   // 10 XP
+            penalty: HabitPenalty.severe,        // 25 XP
+          ),
+        ],
+      );
+    }
+
+    test(
+      'pénalité nulle quand le clamp absorbe tout : marquer manqué puis effacer '
+      'ne crée pas d\'XP',
+      () async {
+        // Catégorie à 0 XP. Gain = 10, pénalité nominale = 25.
+        // Après « manqué » : (0 + 10 - 10 - 25).clamp(0) = 0.
+        // Pénalité réellement prélevée = 0, donc effacer doit rendre 0.
+        final (:container, controller: _) = _setup(baseAvecPenalite());
+        final controleur = await _ready(container);
+        final habit = container.read(appDataProvider).habits.first;
+        final jour = today();
+
+        await controleur.cycleHabit(habit, jour); // réussi  → XP = 10
+        await controleur.cycleHabit(habit, jour); // manqué  → XP = 0 (clampé)
+        await controleur.cycleHabit(habit, jour); // effacé  → XP doit rester 0
+
+        expect(
+          container.read(appDataProvider).categoryById('c1')!.xp,
+          0,
+          reason: 'effacer un pointage manqué ne doit jamais créer d\'XP',
+        );
+      },
+    );
+
+    test('pénalité partielle quand l\'XP disponible est insuffisante', () async {
+      // Catégorie à 5 XP avant le pointage. Gain = 10 → XP = 15.
+      // delta = -10 - 25 = -35 → (15 - 35).clamp(0) = 0.
+      // Pénalité réelle = 0 - 15 - (-10) = 5 (les 5 XP hors du gain).
+      final base = baseAvecPenalite();
+      final (:container, controller: _) = _setup(
+        base.copyWith(
+          categories: [base.categories.first.copyWith(xp: 5)],
+        ),
+      );
+      final controleur = await _ready(container);
+      final habit = container.read(appDataProvider).habits.first;
+      final jour = today();
+
+      await controleur.cycleHabit(habit, jour); // réussi  → XP = 15
+      await controleur.cycleHabit(habit, jour); // manqué  → XP = 0
+      await controleur.cycleHabit(habit, jour); // effacé  → XP doit revenir à 5
+
+      expect(
+        container.read(appDataProvider).categoryById('c1')!.xp,
+        5,
+        reason: 'effacer restitue la pénalité réelle, pas la pénalité nominale',
+      );
+    });
+
+    test('pénalité pleine quand l\'XP disponible est suffisante', () async {
+      // Catégorie à 100 XP avant le pointage. Gain = 10 → XP = 110.
+      // delta = -35 → XP = 75, aucun clamp.
+      // Pénalité réelle = 25 (nominale entière).
+      // Effacer : XP revient à 100.
+      final base = baseAvecPenalite();
+      final (:container, controller: _) = _setup(
+        base.copyWith(
+          categories: [base.categories.first.copyWith(xp: 100)],
+        ),
+      );
+      final controleur = await _ready(container);
+      final habit = container.read(appDataProvider).habits.first;
+      final jour = today();
+
+      await controleur.cycleHabit(habit, jour); // réussi  → XP = 110
+      await controleur.cycleHabit(habit, jour); // manqué  → XP = 75
+      await controleur.cycleHabit(habit, jour); // effacé  → XP doit revenir à 100
+
+      expect(
+        container.read(appDataProvider).categoryById('c1')!.xp,
+        100,
+      );
+    });
+  });
+
   group('Objectifs', () {
     test('cocher une étape crédite son XP, la décocher la reprend', () async {
       final depart = _base();
