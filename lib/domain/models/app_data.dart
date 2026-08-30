@@ -1,10 +1,31 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show immutable;
 
 import '../engine/leveling.dart';
 import 'category.dart';
 import 'goal.dart';
 import 'habit.dart';
 import 'habit_log.dart';
+
+/// Préférence d'apparence de l'application.
+///
+/// Enum maison plutôt que le `ThemeMode` de Material : le domaine ne doit
+/// dépendre d'aucune bibliothèque d'interface. Les noms sont conservés à
+/// l'identique pour que les sauvegardes existantes se relisent sans migration.
+enum AppearanceMode {
+  /// Suit le réglage du système.
+  system,
+  light,
+  dark;
+
+  String get label => switch (this) {
+    AppearanceMode.system => 'Auto',
+    AppearanceMode.light => 'Clair',
+    AppearanceMode.dark => 'Sombre',
+  };
+
+  static AppearanceMode fromKey(String? key) => AppearanceMode.values
+      .firstWhere((m) => m.name == key, orElse: () => AppearanceMode.system);
+}
 
 /// L'intégralité des données de l'utilisateur, en un seul objet immuable.
 ///
@@ -15,7 +36,7 @@ class AppData {
   const AppData({
     this.schemaVersion = currentSchemaVersion,
     this.profileName = 'Aventurier',
-    this.themeMode = ThemeMode.system,
+    this.themeMode = AppearanceMode.system,
     this.categories = const [],
     this.habits = const [],
     this.logs = const {},
@@ -31,7 +52,7 @@ class AppData {
   final String profileName;
 
   /// Préférence d'apparence, conservée avec les données.
-  final ThemeMode themeMode;
+  final AppearanceMode themeMode;
 
   final List<Category> categories;
   final List<Habit> habits;
@@ -52,8 +73,9 @@ class AppData {
       categories.where((c) => !c.archived).toList()
         ..sort((a, b) => a.sortIndex.compareTo(b.sortIndex));
 
-  List<Habit> get activeHabits => habits.where((h) => !h.archived).toList()
-    ..sort((a, b) => a.sortIndex.compareTo(b.sortIndex));
+  List<Habit> get activeHabits =>
+      habits.where((h) => !h.archived).toList()
+        ..sort((a, b) => a.sortIndex.compareTo(b.sortIndex));
 
   List<Goal> get openGoals => goals.where((g) => !g.isCompleted).toList();
 
@@ -94,7 +116,7 @@ class AppData {
 
   AppData copyWith({
     String? profileName,
-    ThemeMode? themeMode,
+    AppearanceMode? themeMode,
     List<Category>? categories,
     List<Habit>? habits,
     Map<String, HabitLog>? logs,
@@ -134,10 +156,7 @@ class AppData {
     return AppData(
       schemaVersion: json['schemaVersion'] as int? ?? currentSchemaVersion,
       profileName: json['profileName'] as String? ?? 'Aventurier',
-      themeMode: ThemeMode.values.firstWhere(
-        (m) => m.name == json['themeMode'],
-        orElse: () => ThemeMode.system,
-      ),
+      themeMode: AppearanceMode.fromKey(json['themeMode'] as String?),
       categories: ((json['categories'] as List?) ?? const [])
           .map((e) => Category.fromJson((e as Map).cast<String, dynamic>()))
           .toList(),

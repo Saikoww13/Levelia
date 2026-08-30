@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -53,9 +53,9 @@ final statsProvider = Provider<StatsSnapshot>((ref) {
 
 StatsSnapshot _computeStats(AppData data) {
   final fin = today();
-  final debutGrille = startOfWeek(fin).subtract(
-    Duration(days: 7 * (_heatmapWeeks - 1)),
-  );
+  final debutGrille = startOfWeek(
+    fin,
+  ).subtract(Duration(days: 7 * (_heatmapWeeks - 1)));
 
   final ratios = <String, double>{};
   final habitudes = data.activeHabits;
@@ -137,124 +137,120 @@ class StatsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
     final stats = ref.watch(statsProvider);
-    final theme = Theme.of(context);
     final niveau = data.globalLevel;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Progression')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          GridView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            // Hauteur fixe plutôt qu'un rapport largeur/hauteur : les compteurs
-            // gardent la même allure quelle que soit la largeur de la fenêtre.
-            gridDelegate:
-                const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 260,
-                  mainAxisExtent: 132,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return AppPage(
+      title: 'Progression',
+      children: [
+        GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          // Hauteur fixe plutôt qu'un rapport largeur/hauteur : les compteurs
+          // gardent la même allure quelle que soit la largeur de la fenêtre.
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 260,
+            mainAxisExtent: 128,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+          ),
+          children: [
+            StatTile(
+              value: '${data.totalXp}',
+              label: 'XP au total',
+              icon: CupertinoIcons.bolt_fill,
+              color: AppTheme.seed,
+            ),
+            StatTile(
+              value: 'NIV ${niveau.level}',
+              label: niveau.rank,
+              icon: CupertinoIcons.rosette,
+              color: AppTheme.streak,
+            ),
+            StatTile(
+              value: stats.bestStreakLabel,
+              label: 'Meilleure série',
+              icon: CupertinoIcons.flame_fill,
+              color: AppTheme.streak,
+            ),
+            StatTile(
+              value: '${(stats.completionRate30 * 100).round()} %',
+              label: 'Réussite sur 30 j',
+              icon: CupertinoIcons.chart_pie_fill,
+              color: AppTheme.success,
+            ),
+          ],
+        ),
+
+        Gaps.h24,
+        const SectionTitle(title: 'Régularité'),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StatTile(
-                value: '${data.totalXp}',
-                label: 'XP au total',
-                icon: Icons.bolt,
-                color: theme.colorScheme.primary,
+              Text(
+                '${plural(stats.totalDone, 'journée tenue', 'journées tenues')} '
+                'sur ${plural(stats.activeDays, 'jour')} d\'activité',
+                style: AppText.caption(secondaire),
               ),
-              StatTile(
-                value: 'Niv. ${niveau.level}',
-                label: niveau.rank,
-                icon: Icons.military_tech,
-                color: AppTheme.streak,
-              ),
-              StatTile(
-                value: stats.bestStreakLabel,
-                label: 'Meilleure série',
-                icon: Icons.local_fire_department,
-                color: AppTheme.streak,
-              ),
-              StatTile(
-                value: '${(stats.completionRate30 * 100).round()} %',
-                label: 'Réussite sur 30 j',
-                icon: Icons.percent,
-                color: AppTheme.success,
+              Gaps.h16,
+              CompletionHeatmap(
+                ratios: stats.dailyRatios,
+                weeks: _heatmapWeeks,
+                color: AppTheme.seed,
               ),
             ],
           ),
+        ),
 
-          Gaps.h24,
-          const SectionTitle(title: 'Régularité'),
+        Gaps.h24,
+        const SectionTitle(title: 'XP des 14 derniers jours'),
+        AppCard(
+          child: DailyXpChart(values: stats.dailyXp, color: AppTheme.seed),
+        ),
+
+        Gaps.h24,
+        const SectionTitle(title: 'Niveau par domaine'),
+        if (data.activeCategories.isEmpty)
           AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${plural(stats.totalDone, 'journée tenue', 'journées tenues')} '
-                  'sur ${plural(stats.activeDays, 'jour')} d\'activité',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Gaps.h16,
-                CompletionHeatmap(
-                  ratios: stats.dailyRatios,
-                  weeks: _heatmapWeeks,
-                  color: theme.colorScheme.primary,
-                ),
-              ],
-            ),
-          ),
-
-          Gaps.h24,
-          const SectionTitle(title: 'XP des 14 derniers jours'),
-          AppCard(
-            child: DailyXpChart(
-              values: stats.dailyXp,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-
-          Gaps.h24,
-          const SectionTitle(title: 'Niveau par domaine'),
-          if (data.activeCategories.isEmpty)
-            const AppCard(child: Text('Aucune catégorie.'))
-          else
-            for (final categorie in data.activeCategories) ...[
-              AppCard(
-                accent: categorie.color,
-                child: Row(
-                  children: [
-                    CategoryAvatar(category: categorie, size: 40),
-                    Gaps.w12,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            categorie.name,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Gaps.h8,
-                          XpBar(
-                            info: categorie.levelInfo,
-                            color: categorie.color,
-                            compact: true,
-                          ),
-                        ],
-                      ),
+            child: Text('Aucun domaine.', style: AppText.body(secondaire)),
+          )
+        else
+          for (final categorie in data.activeCategories) ...[
+            AppCard(
+              accent: categorie.color,
+              child: Row(
+                children: [
+                  CategoryAvatar(category: categorie, size: 38),
+                  Gaps.w12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          categorie.name,
+                          style: AppText.title(label, size: 15),
+                        ),
+                        Gaps.h8,
+                        XpBar(
+                          info: categorie.levelInfo,
+                          color: categorie.color,
+                          compact: true,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Gaps.h8,
-            ],
-        ],
-      ),
+            ),
+            Gaps.h8,
+          ],
+      ],
     );
   }
 }

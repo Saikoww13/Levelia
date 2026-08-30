@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/category.dart';
@@ -7,31 +6,40 @@ import '../../state/providers.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 
-/// Ligne d'habitude — canal de la session du jour.
+/// Ligne d'habitude de l'écran du jour.
+///
+/// Un appui fait tourner l'état : à faire → réussi → manqué → à faire.
+/// Les trois états sont distincts à dessein : « manqué » est une information
+/// utile, différente de « pas encore pointé ».
 class HabitTile extends StatelessWidget {
   const HabitTile({
     super.key,
     required this.entry,
     required this.category,
     required this.onTap,
-    this.onLongPress,
   });
 
   final HabitEntry entry;
   final Category? category;
   final VoidCallback onTap;
-  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final habitude = entry.habit;
-    final couleur = category?.color ?? theme.colorScheme.primary;
+    final couleur = category?.color ?? AppTheme.seed;
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     final (icone, couleurEtat) = switch ((entry.isDone, entry.isMissed)) {
-      (true, _) => (Icons.check_circle, AppTheme.success),
-      (_, true) => (Icons.cancel, AppTheme.missed),
-      _ => (Icons.radio_button_unchecked, theme.colorScheme.outline),
+      (true, _) => (CupertinoIcons.checkmark_circle_fill, AppTheme.success),
+      (_, true) => (CupertinoIcons.xmark_circle_fill, AppTheme.missed),
+      _ => (
+        CupertinoIcons.circle,
+        CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context),
+      ),
     };
 
     final xpText = entry.isDone
@@ -52,23 +60,14 @@ class HabitTile extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 11, 14, 11),
       child: Row(
         children: [
-          // State toggle icon
-          GestureDetector(
-            onTap: onTap,
-            child: Icon(icone, size: 28, color: couleurEtat),
-          ),
+          Icon(icone, size: 26, color: couleurEtat),
           Gaps.w12,
-          // Category dot
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: couleur,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: couleur, shape: BoxShape.circle),
           ),
           const SizedBox(width: 10),
-          // Habit name + meta
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,11 +76,7 @@ class HabitTile extends StatelessWidget {
                 Row(
                   children: [
                     if (habitude.isNegative) ...[
-                      Icon(
-                        Icons.block,
-                        size: 13,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      Icon(CupertinoIcons.nosign, size: 13, color: secondaire),
                       Gaps.w4,
                     ],
                     Expanded(
@@ -89,15 +84,15 @@ class HabitTile extends StatelessWidget {
                         habitude.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          decoration: entry.isMissed
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: entry.isMissed
-                              ? theme.colorScheme.onSurfaceVariant
-                              : theme.colorScheme.onSurface,
-                        ),
+                        style:
+                            AppText.title(
+                              entry.isMissed ? secondaire : label,
+                              size: 15,
+                            ).copyWith(
+                              decoration: entry.isMissed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
                       ),
                     ),
                   ],
@@ -110,10 +105,7 @@ class HabitTile extends StatelessWidget {
                   children: [
                     Text(
                       habitude.schedule.label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        letterSpacing: 0.2,
-                      ),
+                      style: AppText.caption(secondaire, size: 12),
                     ),
                     if (entry.streak.current > 0)
                       StreakPill(label: entry.streak.currentLabel),
@@ -123,30 +115,12 @@ class HabitTile extends StatelessWidget {
             ),
           ),
           Gaps.w12,
-          // XP readout
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                xpText,
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: xpColor,
-                  height: 1.0,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              Text(
-                'XP',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              Text(xpText, style: AppText.readout(size: 18, color: xpColor)),
+              Text('XP', style: AppText.unit(secondaire)),
             ],
           ),
         ],

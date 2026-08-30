@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/util/day.dart';
@@ -12,6 +11,7 @@ import '../widgets/level_widgets.dart';
 import '../widgets/xp_feedback.dart';
 import 'habit_tile.dart';
 
+/// L'écran du quotidien : ce qu'il y a à faire, et ce que ça rapporte.
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key});
 
@@ -22,102 +22,93 @@ class TodayScreen extends ConsumerWidget {
     final entries = ref.watch(dayEntriesProvider);
     final avancement = ref.watch(dayProgressProvider);
     final xpDuJour = ref.watch(dayXpProvider);
-    final theme = Theme.of(context);
 
     final estAujourdhui = isSameDay(jour, today());
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(estAujourdhui ? 'Aujourd\'hui' : 'Journée passée'),
-            Text(
-              longDayLabel(jour),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          if (!estAujourdhui)
-            TextButton.icon(
-              onPressed: () =>
-                  ref.read(selectedDayProvider.notifier).state = today(),
-              icon: const Icon(Icons.today, size: 18),
-              label: const Text('Revenir'),
-            ),
-          Gaps.w8,
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
+    return AppPage(
+      title: estAujourdhui ? 'Aujourd\'hui' : 'Journée passée',
+      trailing: NavAddButton(
         onPressed: () => openHabitEditor(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Habitude'),
+        semantic: 'Nouvelle habitude',
       ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          children: [
-            _SessionCard(
-              done: avancement.done,
-              total: avancement.total,
-              ratio: avancement.ratio,
-              xpDuJour: xpDuJour,
-            ),
-            Gaps.h12,
-            const _WeekStrip(),
-            Gaps.h12,
-            const _CategoryFilterBar(),
-            Gaps.h12,
-            if (entries.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 40),
-                child: EmptyState(
-                  icon: Icons.self_improvement,
-                  title: data.activeHabits.isEmpty
-                      ? 'Aucune habitude pour l\'instant'
-                      : 'Rien de prévu ce jour-là',
-                  message: data.activeHabits.isEmpty
-                      ? 'Crée ta première habitude et commence à accumuler de l\'XP.'
-                      : 'Aucune habitude n\'est planifiée ici.',
-                  action: FilledButton.icon(
-                    onPressed: () => openHabitEditor(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Créer une habitude'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  longDayLabel(jour),
+                  style: AppText.caption(secondaire),
+                ),
+              ),
+              if (!estAujourdhui)
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 28),
+                  onPressed: () =>
+                      ref.read(selectedDayProvider.notifier).state = today(),
+                  child: const Text(
+                    'Aujourd\'hui',
+                    style: TextStyle(fontSize: 14),
                   ),
                 ),
-              )
-            else
-              for (final entry in entries) ...[
-                HabitTile(
-                  entry: entry,
-                  category: data.categoryById(entry.habit.categoryId),
-                  onTap: () async {
-                    final evenement = await ref
-                        .read(appControllerProvider.notifier)
-                        .cycleHabit(entry.habit, jour);
-                    if (!context.mounted) return;
-                    showXpFeedback(
-                      context,
-                      ref.read(appDataProvider),
-                      evenement,
-                    );
-                  },
-                ),
-                Gaps.h8,
-              ],
-          ],
+            ],
+          ),
         ),
-      ),
+        _SessionCard(
+          done: avancement.done,
+          total: avancement.total,
+          ratio: avancement.ratio,
+          xpDuJour: xpDuJour,
+        ),
+        Gaps.h12,
+        const _WeekStrip(),
+        Gaps.h12,
+        const _CategoryFilterBar(),
+        Gaps.h12,
+        if (entries.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 32),
+            child: EmptyState(
+              icon: CupertinoIcons.sparkles,
+              title: data.activeHabits.isEmpty
+                  ? 'Aucune habitude pour l\'instant'
+                  : 'Rien de prévu ce jour-là',
+              message: data.activeHabits.isEmpty
+                  ? 'Crée ta première habitude et commence à accumuler de l\'XP.'
+                  : 'Aucune habitude n\'est planifiée ici.',
+              action: CupertinoButton.filled(
+                onPressed: () => openHabitEditor(context, ref),
+                child: const Text('Créer une habitude'),
+              ),
+            ),
+          )
+        else
+          for (final entry in entries) ...[
+            HabitTile(
+              entry: entry,
+              category: data.categoryById(entry.habit.categoryId),
+              onTap: () async {
+                final evenement = await ref
+                    .read(appControllerProvider.notifier)
+                    .cycleHabit(entry.habit, jour);
+                if (!context.mounted) return;
+                showXpFeedback(context, ref.read(appDataProvider), evenement);
+              },
+            ),
+            Gaps.h8,
+          ],
+      ],
     );
   }
 }
 
-/// Carte de session — scorecard du jour.
+/// Carte de session — le tableau de bord de la journée.
 class _SessionCard extends ConsumerWidget {
   const _SessionCard({
     required this.done,
@@ -134,28 +125,43 @@ class _SessionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
-    final theme = Theme.of(context);
     final niveau = data.globalLevel;
     final complete = done == total && total > 0;
 
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+    final arc = complete ? AppTheme.success : AppTheme.seed;
+
     return AppCard(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: two stat columns
           Row(
             children: [
-              // Completion arc + stat
-              _CompletionArc(
-                done: done,
-                total: total,
-                ratio: ratio,
-                complete: complete,
-                theme: theme,
+              ProgressRing(
+                progress: total == 0 ? 0 : ratio,
+                color: arc,
+                size: 64,
+                strokeWidth: 5,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$done', style: AppText.readout(size: 20, color: arc)),
+                    Text(
+                      '/$total',
+                      style: AppText.readout(
+                        size: 11,
+                        color: secondaire,
+                        weight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Gaps.w16,
-              // Right column: label + XP
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,13 +172,9 @@ class _SessionCard extends ConsumerWidget {
                           : complete
                           ? 'Session complète'
                           : 'En cours',
-                      style: GoogleFonts.barlow(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: complete
-                            ? AppTheme.success
-                            : theme.colorScheme.onSurface,
-                        letterSpacing: 0.2,
+                      style: AppText.title(
+                        complete ? AppTheme.success : label,
+                        size: 15,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -182,26 +184,13 @@ class _SessionCard extends ConsumerWidget {
                       children: [
                         Text(
                           xpDuJour > 0 ? '+$xpDuJour' : '0',
-                          style: GoogleFonts.barlowCondensed(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                            color: xpDuJour > 0
-                                ? AppTheme.success
-                                : theme.colorScheme.onSurfaceVariant,
-                            height: 1.0,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                          style: AppText.readout(
+                            size: 26,
+                            color: xpDuJour > 0 ? AppTheme.success : secondaire,
                           ),
                         ),
                         Gaps.w4,
-                        Text(
-                          'XP',
-                          style: GoogleFonts.barlowCondensed(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
+                        Text('XP', style: AppText.unit(secondaire, size: 13)),
                       ],
                     ),
                   ],
@@ -210,10 +199,9 @@ class _SessionCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          // XP level bar
           XpBar(
             info: niveau,
-            color: theme.colorScheme.primary,
+            color: AppTheme.seed,
             label: 'Niveau global · ${niveau.rank}',
           ),
         ],
@@ -222,80 +210,13 @@ class _SessionCard extends ConsumerWidget {
   }
 }
 
-class _CompletionArc extends StatelessWidget {
-  const _CompletionArc({
-    required this.done,
-    required this.total,
-    required this.ratio,
-    required this.complete,
-    required this.theme,
-  });
-
-  final int done;
-  final int total;
-  final double ratio;
-  final bool complete;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final arcColor =
-        complete ? AppTheme.success : theme.colorScheme.primary;
-
-    return SizedBox(
-      width: 64,
-      height: 64,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 64,
-            height: 64,
-            child: CircularProgressIndicator(
-              value: total == 0 ? 0 : ratio,
-              strokeWidth: 5,
-              strokeCap: StrokeCap.round,
-              backgroundColor: arcColor.withValues(alpha: 0.12),
-              valueColor: AlwaysStoppedAnimation(arcColor),
-            ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$done',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: arcColor,
-                  height: 1.0,
-                ),
-              ),
-              Text(
-                '/$total',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.0,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Sélecteur de journée sur 7 jours.
+/// Sélecteur de journée sur la semaine en cours.
 class _WeekStrip extends ConsumerWidget {
   const _WeekStrip();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectionne = ref.watch(selectedDayProvider);
-    final theme = Theme.of(context);
     final jours = weekDays(selectionne);
     final aujourdhui = today();
 
@@ -307,10 +228,9 @@ class _WeekStrip extends ConsumerWidget {
               day: jour,
               selected: isSameDay(jour, selectionne),
               isToday: isSameDay(jour, aujourdhui),
+              // On ne pointe pas le futur : seul le passé se rattrape.
               enabled: !jour.isAfter(aujourdhui),
-              onTap: () =>
-                  ref.read(selectedDayProvider.notifier).state = jour,
-              theme: theme,
+              onTap: () => ref.read(selectedDayProvider.notifier).state = jour,
             ),
           ),
       ],
@@ -325,7 +245,6 @@ class _DayCell extends StatelessWidget {
     required this.isToday,
     required this.enabled,
     required this.onTap,
-    required this.theme,
   });
 
   final DateTime day;
@@ -333,53 +252,44 @@ class _DayCell extends StatelessWidget {
   final bool isToday;
   final bool enabled;
   final VoidCallback onTap;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = !enabled
-        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3)
+    final couleurTexte = !enabled
+        ? CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context)
         : selected
-        ? theme.colorScheme.onPrimary
-        : theme.colorScheme.onSurface;
+        ? CupertinoColors.white
+        : CupertinoDynamicColor.resolve(AppTheme.label, context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 7),
           decoration: BoxDecoration(
-            color: selected
-                ? theme.colorScheme.primary
-                : Colors.transparent,
+            color: selected ? AppTheme.seed : const Color(0x00000000),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isToday && !selected
-                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
-                  : Colors.transparent,
+                  ? AppTheme.seed.withValues(alpha: 0.6)
+                  : const Color(0x00000000),
             ),
           ),
           child: Column(
             children: [
               Text(
                 weekdayLabelsShort[day.weekday - 1],
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: textColor.withValues(alpha: 0.7),
-                  letterSpacing: 0.6,
+                style: AppText.unit(
+                  couleurTexte.withValues(alpha: 0.75),
+                  size: 10,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 '${day.day}',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
+                style: AppText.readout(size: 15, color: couleurTexte),
               ),
             ],
           ),
@@ -389,7 +299,7 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-/// Filtres par catégorie.
+/// Filtres par catégorie, en capsules défilantes.
 class _CategoryFilterBar extends ConsumerWidget {
   const _CategoryFilterBar();
 
@@ -405,23 +315,26 @@ class _CategoryFilterBar extends ConsumerWidget {
         ref.read(categoryFilterProvider.notifier).state = id;
 
     return SizedBox(
-      height: 36,
+      height: 34,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.zero,
         children: [
-          FilterChip(
-            label: const Text('Tout'),
+          _FilterPill(
+            label: 'Tout',
             selected: filtre == null,
-            onSelected: (_) => choisir(null),
+            color: AppTheme.seed,
+            onTap: () => choisir(null),
           ),
           Gaps.w8,
           for (final Category categorie in categories) ...[
-            FilterChip(
-              avatar: Text(categorie.emoji),
-              label: Text(categorie.name),
+            _FilterPill(
+              label: categorie.name,
+              emoji: categorie.emoji,
               selected: filtre == categorie.id,
-              selectedColor: categorie.color.withValues(alpha: 0.2),
-              onSelected: (choisi) => choisir(choisi ? categorie.id : null),
+              color: categorie.color,
+              onTap: () =>
+                  choisir(filtre == categorie.id ? null : categorie.id),
             ),
             Gaps.w8,
           ],
@@ -431,3 +344,66 @@ class _CategoryFilterBar extends ConsumerWidget {
   }
 }
 
+/// Capsule de filtre, dans l'esprit des pastilles iOS.
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+    this.emoji,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  final String? emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final texte = selected
+        ? color
+        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: 0.16)
+              : CupertinoDynamicColor.resolve(AppTheme.card, context),
+          borderRadius: BorderRadius.circular(17),
+          border: Border.all(
+            color: selected
+                ? color.withValues(alpha: 0.45)
+                : CupertinoDynamicColor.resolve(AppTheme.separator, context),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (emoji != null) ...[
+              Text(emoji!, style: const TextStyle(fontSize: 13)),
+              Gaps.w4,
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: '.SF Pro Text',
+                fontSize: 14,
+                letterSpacing: -0.2,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: texte,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

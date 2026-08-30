@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,27 +7,25 @@ import '../../core/util/day.dart';
 import '../../domain/models/goal.dart';
 import '../../state/providers.dart';
 import '../widgets/common.dart';
-import '../widgets/sheet.dart';
+import '../widgets/modal_page.dart';
 
 /// Ouvre l'éditeur d'objectif, en création ou en modification.
 Future<void> openGoalEditor(
   BuildContext context,
   WidgetRef ref, {
   Goal? goal,
-}) {
+}) async {
   final data = ref.read(appDataProvider);
   if (data.activeCategories.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Crée d\'abord une catégorie dans l\'onglet Profil.'),
-      ),
+    return showNotice(
+      context,
+      title: 'Aucun domaine',
+      message: 'Crée d\'abord un domaine dans l\'onglet Profil.',
     );
-    return Future.value();
   }
 
-  return showAppSheet(
+  return showAppModal<void>(
     context: context,
-    title: goal == null ? 'Nouvel objectif' : 'Modifier l\'objectif',
     builder: (_) => _GoalEditor(goal: goal),
   );
 }
@@ -54,7 +52,6 @@ class _MilestoneDraft {
 class _GoalEditorState extends ConsumerState<_GoalEditor> {
   static const _uuid = Uuid();
 
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titre;
   late final TextEditingController _description;
 
@@ -70,7 +67,8 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
     final objectif = widget.goal;
     final data = ref.read(appDataProvider);
 
-    _titre = TextEditingController(text: objectif?.title ?? '');
+    _titre = TextEditingController(text: objectif?.title ?? '')
+      ..addListener(() => setState(() {}));
     _description = TextEditingController(text: objectif?.description ?? '');
     _categorieId = objectif?.categoryId ?? data.activeCategories.first.id;
     _echeance = objectif?.targetDate;
@@ -91,21 +89,58 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
     super.dispose();
   }
 
+  /// Sélecteur de date iOS : une roue dans une feuille montante.
   Future<void> _choisirEcheance() async {
     final maintenant = today();
-    final choisie = await showDatePicker(
+    var choisie = _echeance ?? maintenant.add(const Duration(days: 30));
+
+    await showCupertinoModalPopup<void>(
       context: context,
-      initialDate: _echeance ?? maintenant.add(const Duration(days: 30)),
-      firstDate: maintenant.subtract(const Duration(days: 365)),
-      lastDate: maintenant.add(const Duration(days: 365 * 10)),
-      helpText: 'Échéance de l\'objectif',
+      builder: (contexte) => Container(
+        height: 300,
+        color: CupertinoDynamicColor.resolve(AppTheme.card, contexte),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CupertinoButton(
+                    onPressed: () => Navigator.of(contexte).pop(),
+                    child: const Text('Annuler'),
+                  ),
+                  CupertinoButton(
+                    onPressed: () {
+                      setState(() => _echeance = dayOf(choisie));
+                      Navigator.of(contexte).pop();
+                    },
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: choisie,
+                  minimumDate: maintenant.subtract(const Duration(days: 365)),
+                  maximumDate: maintenant.add(const Duration(days: 365 * 10)),
+                  onDateTimeChanged: (d) => choisie = d,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
-    if (choisie != null) setState(() => _echeance = dayOf(choisie));
   }
 
-  Future<void> _enregistrer() async {
-    if (!_formKey.currentState!.validate()) return;
+  bool get _valide => _titre.text.trim().isNotEmpty;
 
+  Future<void> _enregistrer() async {
     setState(() => _enregistrement = true);
     try {
       final controleur = ref.read(appControllerProvider.notifier);
@@ -143,179 +178,217 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
       }
 
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) setState(() => _enregistrement = false);
+    } catch (erreur) {
+      if (!mounted) return;
+      setState(() => _enregistrement = false);
+      await showNotice(
+        context,
+        title: 'Enregistrement impossible',
+        message:
+            'Tes données n\'ont pas pu être écrites sur l\'appareil.\n\n$erreur',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
-    final theme = Theme.of(context);
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: _titre,
-            autofocus: widget.goal == null,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Objectif',
-              hintText: 'Ex. : courir 10 km d\'affilée',
-            ),
-            validator: (valeur) =>
-                (valeur ?? '').trim().isEmpty ? 'Donne un titre' : null,
-          ),
-          Gaps.h12,
-          TextFormField(
-            controller: _description,
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Pourquoi (facultatif)',
-              hintText: 'Ce qui te motive, ou comment tu comptes t\'y prendre',
-            ),
-          ),
+    return AppFormPage(
+      title: widget.goal == null ? 'Nouvel objectif' : 'Modifier',
+      actionLabel: widget.goal == null ? 'Créer' : 'OK',
+      onAction: _valide && !_enregistrement ? _enregistrer : null,
+      onDelete: widget.goal == null ? null : _confirmerSuppression,
+      deleteLabel: 'Supprimer l\'objectif',
+      children: [
+        AppTextField(
+          controller: _titre,
+          placeholder: 'Ex. : courir 10 km d\'affilée',
+          autofocus: widget.goal == null,
+        ),
+        Gaps.h8,
+        AppTextField(
+          controller: _description,
+          placeholder: 'Pourquoi (facultatif)',
+          maxLines: 3,
+        ),
 
-          Gaps.h24,
-          const FormLabel('Catégorie'),
-          Gaps.h8,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final categorie in data.activeCategories)
-                ChoiceChip(
-                  avatar: Text(categorie.emoji),
-                  label: Text(categorie.name),
-                  selected: _categorieId == categorie.id,
-                  selectedColor: categorie.color.withValues(alpha: 0.22),
-                  onSelected: (_) =>
-                      setState(() => _categorieId = categorie.id),
+        Gaps.h24,
+        const FormLabel('Domaine'),
+        Gaps.h8,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final categorie in data.activeCategories)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _categorieId = categorie.id),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _categorieId == categorie.id
+                        ? categorie.color.withValues(alpha: 0.16)
+                        : CupertinoDynamicColor.resolve(
+                            AppTheme.field,
+                            context,
+                          ),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _categorieId == categorie.id
+                          ? categorie.color.withValues(alpha: 0.45)
+                          : CupertinoDynamicColor.resolve(
+                              AppTheme.separator,
+                              context,
+                            ),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        categorie.emoji,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      Gaps.w4,
+                      Text(
+                        categorie.name,
+                        style: TextStyle(
+                          fontFamily: '.SF Pro Text',
+                          fontSize: 14,
+                          letterSpacing: -0.2,
+                          fontWeight: _categorieId == categorie.id
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: _categorieId == categorie.id
+                              ? categorie.color
+                              : secondaire,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-            ],
-          ),
+              ),
+          ],
+        ),
 
-          Gaps.h24,
-          Row(
+        Gaps.h24,
+        const FormLabel('Échéance'),
+        Gaps.h8,
+        AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          child: Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  alignment: Alignment.centerLeft,
                   onPressed: _choisirEcheance,
-                  icon: const Icon(Icons.event_outlined, size: 18),
-                  label: Text(
+                  child: Text(
                     _echeance == null
-                        ? 'Ajouter une échéance'
-                        : 'Échéance : ${shortDayLabel(_echeance!)}',
+                        ? 'Aucune échéance'
+                        : shortDayLabel(_echeance!),
+                    style: AppText.body(_echeance == null ? secondaire : label),
                   ),
                 ),
               ),
               if (_echeance != null)
-                IconButton(
-                  tooltip: 'Retirer l\'échéance',
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(32, 32),
                   onPressed: () => setState(() => _echeance = null),
-                  icon: const Icon(Icons.close),
+                  child: Icon(
+                    CupertinoIcons.clear_circled_solid,
+                    size: 18,
+                    color: secondaire,
+                    semanticLabel: 'Retirer l\'échéance',
+                  ),
                 ),
             ],
           ),
+        ),
 
-          Gaps.h24,
-          Row(
-            children: [
-              const Expanded(child: FormLabel('Étapes')),
-              Text(
-                '+${Milestone.xpReward} XP chacune',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          Gaps.h8,
-          for (var i = 0; i < _etapes.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _etapes[i].controller,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: 'Étape ${i + 1}',
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Retirer cette étape',
-                    onPressed: _etapes.length == 1
-                        ? null
-                        : () {
-                            _etapes[i].controller.dispose();
-                            setState(() => _etapes.removeAt(i));
-                          },
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                ],
-              ),
+        Gaps.h24,
+        Row(
+          children: [
+            const Expanded(child: FormLabel('Étapes')),
+            Text(
+              '+${Milestone.xpReward} XP chacune',
+              style: AppText.caption(secondaire, size: 12),
             ),
-          TextButton.icon(
-            onPressed: () => setState(
-              () => _etapes.add(_MilestoneDraft(id: _uuid.v4(), title: '')),
-            ),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Ajouter une étape'),
-          ),
-
-          Gaps.h32,
-          Row(
-            children: [
-              if (widget.goal != null)
-                TextButton.icon(
-                  onPressed: _enregistrement ? null : _confirmerSuppression,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Supprimer'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error,
+          ],
+        ),
+        Gaps.h8,
+        for (var i = 0; i < _etapes.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppTextField(
+                    controller: _etapes[i].controller,
+                    placeholder: 'Étape ${i + 1}',
                   ),
                 ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _enregistrement ? null : _enregistrer,
-                child: Text(widget.goal == null ? 'Créer' : 'Enregistrer'),
-              ),
-            ],
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(40, 40),
+                  onPressed: _etapes.length == 1
+                      ? null
+                      : () {
+                          final retiree = _etapes.removeAt(i);
+                          retiree.controller.dispose();
+                          setState(() {});
+                        },
+                  child: Icon(
+                    CupertinoIcons.minus_circle,
+                    size: 20,
+                    color: _etapes.length == 1
+                        ? CupertinoDynamicColor.resolve(
+                            AppTheme.tertiaryLabel,
+                            context,
+                          )
+                        : AppTheme.missed,
+                    semanticLabel: 'Retirer cette étape',
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        CupertinoButton(
+          padding: EdgeInsets.zero,
+          alignment: Alignment.centerLeft,
+          minimumSize: const Size(0, 36),
+          onPressed: () => setState(
+            () => _etapes.add(_MilestoneDraft(id: _uuid.v4(), title: '')),
+          ),
+          child: const Text(
+            'Ajouter une étape',
+            style: TextStyle(fontSize: 15),
+          ),
+        ),
+      ],
     );
   }
 
   Future<void> _confirmerSuppression() async {
     final objectif = widget.goal!;
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (contexte) => AlertDialog(
-        title: const Text('Supprimer cet objectif ?'),
-        content: Text('« ${objectif.title} » sera définitivement effacé.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexte).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexte).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
+    final confirme = await confirmDestructive(
+      context,
+      title: 'Supprimer cet objectif ?',
+      message: '« ${objectif.title} » sera définitivement effacé.',
     );
 
-    if (confirme != true || !mounted) return;
+    if (!confirme || !mounted) return;
     await ref.read(appControllerProvider.notifier).deleteGoal(objectif.id);
     if (mounted) Navigator.of(context).pop();
   }

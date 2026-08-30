@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -136,7 +135,7 @@ class AppController extends AsyncNotifier<AppData> {
     // On stocke la valeur effective pour que _clearLog restitue exactement autant.
     final xpAvant = _data.categoryById(habit.categoryId)?.xp ?? 0;
     final xpApres = (xpAvant + delta).clamp(0, 1 << 30);
-    final penaliteReelle = (-( xpApres - xpAvant) - repris).clamp(0, penalite);
+    final penaliteReelle = (-(xpApres - xpAvant) - repris).clamp(0, penalite);
 
     await _mutate((data) {
       final log = existant.copyWith(
@@ -361,8 +360,9 @@ class AppController extends AsyncNotifier<AppData> {
 
   Future<void> deleteGoal(String goalId) async {
     await _mutate(
-      (data) =>
-          data.copyWith(goals: data.goals.where((g) => g.id != goalId).toList()),
+      (data) => data.copyWith(
+        goals: data.goals.where((g) => g.id != goalId).toList(),
+      ),
     );
   }
 
@@ -453,7 +453,7 @@ class AppController extends AsyncNotifier<AppData> {
     await _mutate((data) => data.copyWith(profileName: propre));
   }
 
-  Future<void> setThemeMode(ThemeMode mode) async {
+  Future<void> setThemeMode(AppearanceMode mode) async {
     await _mutate((data) => data.copyWith(themeMode: mode));
   }
 

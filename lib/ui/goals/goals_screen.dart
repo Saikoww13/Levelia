@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -18,6 +18,7 @@ class GoalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
+
     final ouverts = data.openGoals
       ..sort((a, b) {
         // Les échéances les plus proches remontent ; les objectifs sans date
@@ -31,164 +32,180 @@ class GoalsScreen extends ConsumerWidget {
       });
     final termines = data.completedGoals;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Objectifs')),
-      floatingActionButton: FloatingActionButton.extended(
+    return AppPage(
+      title: 'Objectifs',
+      trailing: NavAddButton(
         onPressed: () => openGoalEditor(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Objectif'),
+        semantic: 'Nouvel objectif',
       ),
-      body: ouverts.isEmpty && termines.isEmpty
-          ? EmptyState(
-              icon: Icons.flag_outlined,
+      children: [
+        if (ouverts.isEmpty && termines.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 48),
+            child: EmptyState(
+              icon: CupertinoIcons.flag,
               title: 'Aucun objectif',
               message:
                   'Un objectif donne une direction à tes habitudes. Découpe-le en étapes : chacune rapporte ${Milestone.xpReward} XP.',
-              action: FilledButton.icon(
+              action: CupertinoButton.filled(
                 onPressed: () => openGoalEditor(context, ref),
-                icon: const Icon(Icons.add),
-                label: const Text('Créer un objectif'),
+                child: const Text('Créer un objectif'),
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [
-                if (ouverts.isNotEmpty) ...[
-                  const SectionTitle(title: 'En cours'),
-                  for (final objectif in ouverts) ...[
-                    _GoalCard(
-                      goal: objectif,
-                      category: data.categoryById(objectif.categoryId),
-                    ),
-                    Gaps.h12,
-                  ],
-                ],
-                if (termines.isNotEmpty) ...[
-                  Gaps.h16,
-                  SectionTitle(title: 'Atteints (${termines.length})'),
-                  for (final objectif in termines) ...[
-                    _GoalCard(
-                      goal: objectif,
-                      category: data.categoryById(objectif.categoryId),
-                    ),
-                    Gaps.h12,
-                  ],
-                ],
-              ],
             ),
+          )
+        else ...[
+          if (ouverts.isNotEmpty) ...[
+            const SectionTitle(title: 'En cours'),
+            for (final objectif in ouverts) ...[
+              _GoalCard(
+                goal: objectif,
+                category: data.categoryById(objectif.categoryId),
+              ),
+              Gaps.h12,
+            ],
+          ],
+          if (termines.isNotEmpty) ...[
+            Gaps.h16,
+            SectionTitle(title: 'Atteints (${termines.length})'),
+            for (final objectif in termines) ...[
+              _GoalCard(
+                goal: objectif,
+                category: data.categoryById(objectif.categoryId),
+              ),
+              Gaps.h12,
+            ],
+          ],
+        ],
+      ],
     );
   }
 }
 
-/// Carte d'objectif dépliable : l'entête montre l'avancement, le contenu les étapes.
-class _GoalCard extends ConsumerWidget {
+/// Carte d'objectif dépliable : l'entête montre l'avancement, le corps les étapes.
+class _GoalCard extends ConsumerStatefulWidget {
   const _GoalCard({required this.goal, required this.category});
 
   final Goal goal;
   final Category? category;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final couleur = category?.color ?? theme.colorScheme.primary;
+  ConsumerState<_GoalCard> createState() => _GoalCardState();
+}
+
+class _GoalCardState extends ConsumerState<_GoalCard> {
+  bool _deplie = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final objectif = widget.goal;
+    final couleur = widget.category?.color ?? AppTheme.seed;
     final controleur = ref.read(appControllerProvider.notifier);
+
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     return AppCard(
       accent: couleur,
-      padding: EdgeInsets.zero,
-      child: Theme(
-        // On retire les séparateurs par défaut de l'ExpansionTile, la carte
-        // fournit déjà son propre cadre.
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          leading: category == null
-              ? null
-              : CategoryAvatar(category: category!, size: 38),
-          title: Text(
-            goal.title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              decoration: goal.isCompleted ? TextDecoration.lineThrough : null,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Column(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _deplie = !_deplie),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: goal.progress,
-                    minHeight: 6,
-                    backgroundColor: couleur.withValues(alpha: 0.15),
-                    valueColor: AlwaysStoppedAnimation(
-                      goal.isCompleted ? AppTheme.success : couleur,
-                    ),
-                  ),
-                ),
-                Gaps.h8,
-                // Les deux libellés sont bornés : sur un écran étroit, une
-                // échéance longue ne doit pas pousser le compteur hors du cadre.
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (goal.milestones.isNotEmpty)
-                      Flexible(
-                        child: Text(
-                          '${goal.milestonesDone}/${goal.milestones.length} étapes',
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                if (widget.category != null) ...[
+                  CategoryAvatar(category: widget.category!, size: 36),
+                  Gaps.w12,
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        objectif.title,
+                        style: AppText.title(label, size: 15).copyWith(
+                          decoration: objectif.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      Gaps.h8,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: SizedBox(
+                          height: 6,
+                          child: Stack(
+                            children: [
+                              Container(color: couleur.withValues(alpha: 0.14)),
+                              FractionallySizedBox(
+                                widthFactor: objectif.progress.clamp(0.0, 1.0),
+                                child: Container(
+                                  color: objectif.isCompleted
+                                      ? AppTheme.success
+                                      : couleur,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    Gaps.w8,
-                    Flexible(child: _DeadlineLabel(goal: goal)),
-                  ],
+                      Gaps.h8,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (objectif.milestones.isNotEmpty)
+                            Flexible(
+                              child: Text(
+                                '${objectif.milestonesDone}/${objectif.milestones.length} étapes',
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption(secondaire, size: 12),
+                              ),
+                            ),
+                          Gaps.w8,
+                          Flexible(child: _DeadlineLabel(goal: objectif)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Gaps.w8,
+                Icon(
+                  _deplie
+                      ? CupertinoIcons.chevron_up
+                      : CupertinoIcons.chevron_down,
+                  size: 15,
+                  color: secondaire,
                 ),
               ],
             ),
           ),
-          children: [
-            if (goal.description.isNotEmpty) ...[
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  goal.description,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
+          if (_deplie) ...[
+            Gaps.h12,
+            Container(
+              height: 0.5,
+              color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
+            ),
+            Gaps.h12,
+            if (objectif.description.isNotEmpty) ...[
+              Text(
+                objectif.description,
+                style: AppText.caption(secondaire, size: 13),
               ),
               Gaps.h12,
             ],
-            for (final etape in goal.milestones)
-              CheckboxListTile(
-                value: etape.done,
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                title: Text(
-                  etape.title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    decoration: etape.done ? TextDecoration.lineThrough : null,
-                    color: etape.done
-                        ? theme.colorScheme.onSurfaceVariant
-                        : null,
-                  ),
-                ),
-                secondary: Text(
-                  '+${Milestone.xpReward} XP',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                onChanged: (_) async {
+            for (final etape in objectif.milestones)
+              _MilestoneRow(
+                milestone: etape,
+                color: couleur,
+                onToggle: () async {
                   final evenement = await controleur.toggleMilestone(
-                    goal.id,
+                    objectif.id,
                     etape.id,
                   );
                   if (!context.mounted) return;
@@ -198,16 +215,23 @@ class _GoalCard extends ConsumerWidget {
             Gaps.h8,
             Row(
               children: [
-                TextButton.icon(
-                  onPressed: () => openGoalEditor(context, ref, goal: goal),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Modifier'),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 34),
+                  onPressed: () => openGoalEditor(context, ref, goal: objectif),
+                  child: const Text('Modifier', style: TextStyle(fontSize: 14)),
                 ),
                 const Spacer(),
-                FilledButton.tonalIcon(
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  minimumSize: const Size(0, 34),
+                  borderRadius: BorderRadius.circular(17),
+                  color: objectif.isCompleted
+                      ? CupertinoDynamicColor.resolve(AppTheme.field, context)
+                      : AppTheme.success,
                   onPressed: () async {
                     final evenement = await controleur.toggleGoalCompletion(
-                      goal.id,
+                      objectif.id,
                     );
                     if (!context.mounted) return;
                     showXpFeedback(
@@ -216,17 +240,84 @@ class _GoalCard extends ConsumerWidget {
                       evenement,
                     );
                   },
-                  icon: Icon(
-                    goal.isCompleted ? Icons.undo : Icons.emoji_events,
-                    size: 18,
-                  ),
-                  label: Text(
-                    goal.isCompleted
+                  child: Text(
+                    objectif.isCompleted
                         ? 'Rouvrir'
-                        : 'Atteint (+${goal.xpReward} XP)',
+                        : 'Atteint · +${objectif.xpReward} XP',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: objectif.isCompleted
+                          ? secondaire
+                          : CupertinoColors.white,
+                    ),
                   ),
                 ),
               ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Ligne d'étape avec sa case ronde, au format iOS.
+class _MilestoneRow extends StatelessWidget {
+  const _MilestoneRow({
+    required this.milestone,
+    required this.color,
+    required this.onToggle,
+  });
+
+  final Milestone milestone;
+  final Color color;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Icon(
+              milestone.done
+                  ? CupertinoIcons.checkmark_circle_fill
+                  : CupertinoIcons.circle,
+              size: 21,
+              color: milestone.done ? AppTheme.success : secondaire,
+            ),
+            Gaps.w12,
+            Expanded(
+              child: Text(
+                milestone.title,
+                style:
+                    AppText.body(
+                      milestone.done ? secondaire : label,
+                      size: 14,
+                    ).copyWith(
+                      decoration: milestone.done
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+              ),
+            ),
+            Text(
+              '+${Milestone.xpReward}',
+              style: AppText.readout(
+                size: 13,
+                color: secondaire,
+                weight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -235,7 +326,7 @@ class _GoalCard extends ConsumerWidget {
   }
 }
 
-/// Échéance affichée en clair : « dans 12 jours », « en retard de 3 jours ».
+/// Échéance affichée en clair : « Dans 5 jours », « En retard de 3 j ».
 class _DeadlineLabel extends StatelessWidget {
   const _DeadlineLabel({required this.goal});
 
@@ -243,16 +334,20 @@ class _DeadlineLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     if (goal.isCompleted) {
       return Text(
-        'Atteint 🏆',
+        'Atteint',
         textAlign: TextAlign.end,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: AppTheme.success,
-          fontWeight: FontWeight.w700,
-        ),
+        overflow: TextOverflow.ellipsis,
+        style: AppText.caption(
+          AppTheme.success,
+          size: 12,
+        ).copyWith(fontWeight: FontWeight.w600),
       );
     }
 
@@ -261,31 +356,27 @@ class _DeadlineLabel extends StatelessWidget {
       return Text(
         'Sans échéance',
         textAlign: TextAlign.end,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        overflow: TextOverflow.ellipsis,
+        style: AppText.caption(secondaire, size: 12),
       );
     }
 
     final (texte, couleur) = switch (restants) {
-      < 0 => ('En retard de ${-restants} j', theme.colorScheme.error),
+      < 0 => ('En retard de ${-restants} j', AppTheme.missed),
       0 => ('C\'est aujourd\'hui', AppTheme.streak),
       1 => ('Demain', AppTheme.streak),
       < 8 => ('Dans $restants jours', AppTheme.streak),
-      _ => (
-        'Le ${shortDayLabel(goal.targetDate!)}',
-        theme.colorScheme.onSurfaceVariant,
-      ),
+      _ => ('Le ${shortDayLabel(goal.targetDate!)}', secondaire),
     };
 
     return Text(
       texte,
       textAlign: TextAlign.end,
       overflow: TextOverflow.ellipsis,
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: couleur,
-        fontWeight: FontWeight.w600,
-      ),
+      style: AppText.caption(
+        couleur,
+        size: 12,
+      ).copyWith(fontWeight: FontWeight.w600),
     );
   }
 }

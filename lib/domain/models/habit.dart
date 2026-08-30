@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show immutable;
 
 /// Sens d'une habitude.
 enum HabitPolarity {
@@ -33,11 +33,8 @@ enum HabitDifficulty {
   final int xp;
   final String label;
 
-  static HabitDifficulty fromKey(String? key) =>
-      HabitDifficulty.values.firstWhere(
-        (d) => d.name == key,
-        orElse: () => HabitDifficulty.normal,
-      );
+  static HabitDifficulty fromKey(String? key) => HabitDifficulty.values
+      .firstWhere((d) => d.name == key, orElse: () => HabitDifficulty.normal);
 }
 
 /// Pénalité d'XP appliquée quand une habitude est marquée manquée.
@@ -85,7 +82,10 @@ class HabitSchedule {
     this.timesPerWeek = 3,
   });
 
-  const HabitSchedule.daily() : kind = ScheduleKind.daily, weekdays = const {}, timesPerWeek = 7;
+  const HabitSchedule.daily()
+    : kind = ScheduleKind.daily,
+      weekdays = const {},
+      timesPerWeek = 7;
 
   /// [days] utilise la convention de [DateTime.weekday] : 1 = lundi … 7 = dimanche.
   const HabitSchedule.onWeekdays(Set<int> days)

@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' show Color;
+
+import 'package:flutter/foundation.dart' show immutable;
 
 import '../engine/leveling.dart';
 

@@ -1,8 +1,109 @@
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+import 'package:flutter/cupertino.dart';
 
 import '../../core/theme/app_theme.dart';
 
-/// Titre de section, avec une action facultative à droite.
+/// Page standard de l'application : fond, grande barre de titre iOS qui se
+/// replie au défilement, et contenu défilant.
+///
+/// Toutes les destinations principales passent par ici, ce qui garantit le même
+/// comportement de barre partout — c'est ce qui donne à une application son
+/// « allure iOS » avant même les couleurs.
+class AppPage extends StatelessWidget {
+  const AppPage({
+    super.key,
+    required this.title,
+    required this.children,
+    this.subtitle,
+    this.trailing,
+    this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 32),
+  });
+
+  final String title;
+
+  /// Ligne discrète sous le titre replié (date du jour, par exemple).
+  final String? subtitle;
+
+  /// Action de droite dans la barre. Sur iOS, c'est là que vit le « + » —
+  /// il n'y a pas de bouton flottant.
+  final Widget? trailing;
+
+  final List<Widget> children;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return CupertinoPageScaffold(
+      child: CustomScrollView(
+        slivers: [
+          CupertinoSliverNavigationBar(
+            largeTitle: Text(title),
+            middle: subtitle == null ? null : Text(title),
+            trailing: trailing,
+            backgroundColor: CupertinoDynamicColor.resolve(
+              AppTheme.bar,
+              context,
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: CupertinoDynamicColor.resolve(
+                  AppTheme.separator,
+                  context,
+                ),
+                width: 0.5,
+              ),
+            ),
+          ),
+          if (subtitle != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Text(subtitle!, style: AppText.caption(secondaire)),
+              ),
+            ),
+          SliverPadding(
+            padding: padding,
+            sliver: SliverList(
+              delegate: SliverChildListDelegate.fixed(children),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bouton « + » de barre de navigation, au format iOS.
+class NavAddButton extends StatelessWidget {
+  const NavAddButton({super.key, required this.onPressed, this.semantic});
+
+  final VoidCallback onPressed;
+  final String? semantic;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(36, 36),
+      onPressed: onPressed,
+      child: Icon(
+        CupertinoIcons.add,
+        size: 24,
+        color: AppTheme.seed,
+        semanticLabel: semantic,
+      ),
+    );
+  }
+}
+
+/// En-tête de groupe d'une liste iOS : petites capitales grises, calées à
+/// gauche au-dessus de la section.
 class SectionTitle extends StatelessWidget {
   const SectionTitle({super.key, required this.title, this.trailing});
 
@@ -11,16 +112,24 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+              title.toUpperCase(),
+              style: TextStyle(
+                fontFamily: '.SF Pro Text',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+                color: secondaire,
               ),
             ),
           ),
@@ -48,7 +157,11 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     return Center(
       child: Padding(
@@ -58,24 +171,23 @@ class EmptyState extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 56,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              size: 52,
+              color: CupertinoDynamicColor.resolve(
+                AppTheme.tertiaryLabel,
+                context,
+              ),
             ),
             Gaps.h16,
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppText.title(label, size: 17),
             ),
             Gaps.h8,
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: AppText.caption(secondaire, size: 14),
             ),
             if (action != null) ...[Gaps.h24, action!],
           ],
@@ -85,11 +197,7 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-/// Étiquette de section de formulaire, affichée en majuscules.
-///
-/// À utiliser dans les formulaires éditeurs pour les titres de groupe (ex. :
-/// « CATÉGORIE », « RYTHME »). Assure une apparence uniforme quel que soit
-/// l'endroit où l'étiquette est placée.
+/// Étiquette de groupe d'un formulaire, au-dessus d'un contrôle.
 class FormLabel extends StatelessWidget {
   const FormLabel(this.text, {super.key});
 
@@ -97,19 +205,28 @@ class FormLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      text.toUpperCase(),
-      style: theme.textTheme.labelSmall?.copyWith(
-        letterSpacing: 1.1,
-        fontWeight: FontWeight.w700,
-        color: theme.colorScheme.onSurfaceVariant,
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontFamily: '.SF Pro Text',
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+          color: secondaire,
+        ),
       ),
     );
   }
 }
 
-/// Carte simple avec le rembourrage standard de l'application.
+/// Carte au format des listes encartées d'iOS.
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -123,24 +240,63 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
 
-  /// Liseré coloré à gauche, pour rattacher visuellement la carte à une catégorie.
+  /// Teinte de rattachement à une catégorie : voile coloré très léger.
   final Color? accent;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: padding,
-          decoration: accent == null
-              ? null
-              : BoxDecoration(
-                  color: accent!.withValues(alpha: 0.05),
-                ),
-          child: child,
+    final fond = CupertinoDynamicColor.resolve(AppTheme.card, context);
+
+    final contenu = Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: accent == null
+            ? fond
+            : Color.alphaBlend(accent!.withValues(alpha: 0.06), fond),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        border: Border.all(
+          color: accent == null
+              ? CupertinoDynamicColor.resolve(AppTheme.separator, context)
+              : accent!.withValues(alpha: 0.22),
+          width: 0.5,
         ),
+      ),
+      child: child,
+    );
+
+    if (onTap == null) return contenu;
+
+    // Pression atténuée : le retour tactile d'iOS est un fondu, pas une onde.
+    return _PressFade(onTap: onTap!, child: contenu);
+  }
+}
+
+/// Enveloppe tactile façon iOS : le contenu s'atténue tant que le doigt appuie.
+class _PressFade extends StatefulWidget {
+  const _PressFade({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  State<_PressFade> createState() => _PressFadeState();
+}
+
+class _PressFadeState extends State<_PressFade> {
+  bool _enfonce = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _enfonce = true),
+      onTapUp: (_) => setState(() => _enfonce = false),
+      onTapCancel: () => setState(() => _enfonce = false),
+      child: AnimatedOpacity(
+        opacity: _enfonce ? 0.6 : 1,
+        duration: const Duration(milliseconds: 120),
+        child: widget.child,
       ),
     );
   }
@@ -163,40 +319,114 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final teinte = color ?? theme.colorScheme.primary;
+    final teinte = color ?? AppTheme.seed;
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 18, color: teinte),
-            Gaps.h8,
-          ],
+          if (icon != null) ...[Icon(icon, size: 17, color: teinte), Gaps.h8],
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: teinte,
-              height: 1.1,
-            ),
+            style: AppText.readout(size: 26, color: teinte),
           ),
           Gaps.h4,
           Text(
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: AppText.caption(secondaire, size: 12),
           ),
         ],
       ),
     );
   }
+}
+
+/// Anneau de progression déterminé.
+///
+/// Cupertino n'en fournit pas — son indicateur d'activité ne sait qu'attendre,
+/// pas montrer une proportion. On le dessine donc, ce qui permet au passage de
+/// caler l'épaisseur et les extrémités arrondies sur le reste de l'interface.
+class ProgressRing extends StatelessWidget {
+  const ProgressRing({
+    super.key,
+    required this.progress,
+    required this.color,
+    required this.size,
+    this.strokeWidth = 6,
+    this.child,
+  });
+
+  /// Avancement entre 0 et 1.
+  final double progress;
+  final Color color;
+  final double size;
+  final double strokeWidth;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _RingPainter(
+          progress: progress.clamp(0.0, 1.0),
+          color: color,
+          strokeWidth: strokeWidth,
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
+    required this.progress,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  final double progress;
+  final Color color;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect =
+        Offset(strokeWidth / 2, strokeWidth / 2) &
+        Size(size.width - strokeWidth, size.height - strokeWidth);
+
+    final piste = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..color = color.withValues(alpha: 0.14);
+    canvas.drawArc(rect, 0, math.pi * 2, false, piste);
+
+    if (progress <= 0) return;
+
+    final trace = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    // On démarre à midi et on tourne dans le sens horaire.
+    canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * progress, false, trace);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) =>
+      old.progress != progress ||
+      old.color != color ||
+      old.strokeWidth != strokeWidth;
 }

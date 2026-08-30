@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -10,7 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import 'habit_editor.dart';
 
-/// Toutes les habitudes, rangées par catégorie, avec leur régularité.
+/// Toutes les habitudes, rangées par domaine, avec leur régularité.
 class HabitsScreen extends ConsumerWidget {
   const HabitsScreen({super.key});
 
@@ -20,55 +20,54 @@ class HabitsScreen extends ConsumerWidget {
     final actives = data.activeHabits;
     final archivees = data.habits.where((h) => h.archived).toList();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Habitudes')),
-      floatingActionButton: FloatingActionButton.extended(
+    return AppPage(
+      title: 'Habitudes',
+      trailing: NavAddButton(
         onPressed: () => openHabitEditor(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Habitude'),
+        semantic: 'Nouvelle habitude',
       ),
-      body: actives.isEmpty && archivees.isEmpty
-          ? EmptyState(
-              icon: Icons.checklist_rtl,
+      children: [
+        if (actives.isEmpty && archivees.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 48),
+            child: EmptyState(
+              icon: CupertinoIcons.checkmark_circle,
               title: 'Aucune habitude',
               message:
-                  'Les habitudes sont le moteur de ta progression : chaque journée tenue rapporte de l\'XP à sa catégorie.',
-              action: FilledButton.icon(
+                  'Les habitudes sont le moteur de ta progression : chaque journée tenue rapporte de l\'XP à son domaine.',
+              action: CupertinoButton.filled(
                 onPressed: () => openHabitEditor(context, ref),
-                icon: const Icon(Icons.add),
-                label: const Text('Créer une habitude'),
+                child: const Text('Créer une habitude'),
               ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              children: [
-                for (final categorie in data.activeCategories)
-                  if (data.habitsOf(categorie.id).isNotEmpty)
-                    _CategorySection(
-                      category: categorie,
-                      habits: data.habitsOf(categorie.id),
-                    ),
-                if (archivees.isNotEmpty) ...[
-                  Gaps.h16,
-                  const SectionTitle(title: 'Archivées'),
-                  for (final habitude in archivees)
-                    _ArchivedTile(habit: habitude),
-                ],
-              ],
             ),
+          )
+        else ...[
+          for (final categorie in data.activeCategories)
+            if (data.habitsOf(categorie.id).isNotEmpty)
+              _CategorySection(
+                category: categorie,
+                habits: data.habitsOf(categorie.id),
+              ),
+          if (archivees.isNotEmpty) ...[
+            Gaps.h16,
+            const SectionTitle(title: 'Archivées'),
+            for (final habitude in archivees) _ArchivedTile(habit: habitude),
+          ],
+        ],
+      ],
     );
   }
 }
 
-class _CategorySection extends ConsumerWidget {
+class _CategorySection extends StatelessWidget {
   const _CategorySection({required this.category, required this.habits});
 
   final Category category;
   final List<Habit> habits;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context) {
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -77,21 +76,13 @@ class _CategorySection extends ConsumerWidget {
         children: [
           Row(
             children: [
-              CategoryAvatar(category: category, size: 30),
+              CategoryAvatar(category: category, size: 28),
+              Gaps.w8,
+              Text(category.name, style: AppText.title(label, size: 17)),
               Gaps.w8,
               Text(
-                category.name,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Gaps.w8,
-              Text(
-                'Niv. ${category.levelInfo.level}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: category.color,
-                  fontWeight: FontWeight.w700,
-                ),
+                'NIV ${category.levelInfo.level}',
+                style: AppText.unit(category.color, size: 12),
               ),
             ],
           ),
@@ -112,12 +103,49 @@ class _HabitRow extends ConsumerWidget {
   final Habit habit;
   final Category category;
 
+  /// Feuille d'action iOS : c'est ainsi qu'on présente un menu contextuel.
+  Future<void> _menu(BuildContext context, WidgetRef ref) async {
+    final action = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (contexte) => CupertinoActionSheet(
+        title: Text(habit.title),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(contexte).pop('edit'),
+            child: const Text('Modifier'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(contexte).pop('archive'),
+            child: const Text('Archiver'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(contexte).pop(),
+          child: const Text('Annuler'),
+        ),
+      ),
+    );
+
+    if (!context.mounted) return;
+    switch (action) {
+      case 'edit':
+        await openHabitEditor(context, ref, habit: habit);
+      case 'archive':
+        await ref.read(appControllerProvider.notifier).archiveHabit(habit.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
     final serie = Streaks.of(data, habit);
-    final theme = Theme.of(context);
     final taux = (serie.completionRate * 100).round();
+
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
     return AppCard(
       accent: category.color,
@@ -132,11 +160,7 @@ class _HabitRow extends ConsumerWidget {
                 Row(
                   children: [
                     if (habit.isNegative) ...[
-                      Icon(
-                        Icons.block,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      Icon(CupertinoIcons.nosign, size: 14, color: secondaire),
                       Gaps.w4,
                     ],
                     Expanded(
@@ -144,9 +168,7 @@ class _HabitRow extends ConsumerWidget {
                         habit.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppText.title(label, size: 15),
                       ),
                     ),
                   ],
@@ -157,13 +179,9 @@ class _HabitRow extends ConsumerWidget {
                       ? '${habit.schedule.label} · ${habit.difficulty.label}'
                       : '${habit.schedule.label} · ${habit.difficulty.label} · '
                             '-${habit.penalty.xp} XP si manquée',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: AppText.caption(secondaire, size: 12),
                 ),
                 Gaps.h8,
-                // Wrap plutôt que Row : sur un écran étroit, le libellé de
-                // série et le taux ne tiennent pas toujours sur une ligne.
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
@@ -177,30 +195,23 @@ class _HabitRow extends ConsumerWidget {
                     ),
                     Text(
                       '$taux % de réussite',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                      style: AppText.caption(secondaire, size: 12),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Actions',
-            onSelected: (action) async {
-              final controleur = ref.read(appControllerProvider.notifier);
-              switch (action) {
-                case 'edit':
-                  await openHabitEditor(context, ref, habit: habit);
-                case 'archive':
-                  await controleur.archiveHabit(habit.id);
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Modifier')),
-              PopupMenuItem(value: 'archive', child: Text('Archiver')),
-            ],
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(36, 36),
+            onPressed: () => _menu(context, ref),
+            child: Icon(
+              CupertinoIcons.ellipsis,
+              size: 18,
+              color: secondaire,
+              semanticLabel: 'Actions',
+            ),
           ),
         ],
       ),
@@ -215,24 +226,31 @@ class _ArchivedTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: AppCard(
+        padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 habit.title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body(secondaire),
               ),
             ),
-            TextButton(
+            CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              minimumSize: const Size(0, 36),
               onPressed: () => ref
                   .read(appControllerProvider.notifier)
                   .archiveHabit(habit.id, archived: false),
-              child: const Text('Réactiver'),
+              child: const Text('Réactiver', style: TextStyle(fontSize: 14)),
             ),
           ],
         ),

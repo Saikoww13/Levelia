@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/cupertino.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/engine/leveling.dart';
 import '../../domain/models/category.dart';
+import 'common.dart';
 
 /// Pastille ronde d'une catégorie : son emoji sur son fond coloré.
 class CategoryAvatar extends StatelessWidget {
@@ -28,7 +28,7 @@ class CategoryAvatar extends StatelessWidget {
   }
 }
 
-/// Barre de progression XP — style tableau de bord analytique.
+/// Barre de progression d'XP : niveau à gauche, reste à parcourir à droite.
 class XpBar extends StatelessWidget {
   const XpBar({
     super.key,
@@ -45,7 +45,10 @@ class XpBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
     final auMax = info.xpForNextLevel <= 0;
 
     return Column(
@@ -53,7 +56,6 @@ class XpBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            // Level badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
@@ -63,34 +65,25 @@ class XpBar extends StatelessWidget {
               ),
               child: Text(
                 'NIV ${info.level}',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: compact ? 11 : 12,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                  letterSpacing: 0.8,
-                ),
+                style: AppText.unit(color, size: compact ? 11 : 12),
               ),
             ),
-            const SizedBox(width: 8),
+            Gaps.w8,
             Expanded(
               child: Text(
                 label ?? info.rank,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.2,
-                ),
                 overflow: TextOverflow.ellipsis,
+                style: AppText.caption(secondaire, size: 12),
               ),
             ),
             Text(
               auMax
                   ? '${info.totalXp} XP'
                   : '${info.xpIntoLevel}/${info.xpForNextLevel}',
-              style: GoogleFonts.barlowCondensed(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
+              style: AppText.readout(
+                size: 13,
+                color: secondaire,
+                weight: FontWeight.w500,
               ),
             ),
           ],
@@ -122,42 +115,39 @@ class _StatBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
+        final largeur = constraints.maxWidth;
         return SizedBox(
           height: height,
           child: Stack(
             children: [
-              // Background track
               Container(
-                width: width,
+                width: largeur,
                 height: height,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(height / 2),
                 ),
               ),
-              // Fill
               AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOut,
-                width: (width * progress.clamp(0.0, 1.0)),
+                width: largeur * progress.clamp(0.0, 1.0),
                 height: height,
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(height / 2),
                 ),
               ),
-              // Tick marks at 25 / 50 / 75 %
               if (height >= 8)
                 for (final pct in [0.25, 0.50, 0.75])
                   Positioned(
-                    left: width * pct - 0.5,
+                    left: largeur * pct - 0.5,
                     child: Container(
                       width: 1,
                       height: height,
-                      color: progress > pct
-                          ? color.withValues(alpha: 0.3)
-                          : color.withValues(alpha: 0.18),
+                      color: color.withValues(
+                        alpha: progress > pct ? 0.3 : 0.18,
+                      ),
                     ),
                   ),
             ],
@@ -177,50 +167,26 @@ class LevelMedallion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
-    return SizedBox(
-      width: 120,
-      height: 120,
-      child: Stack(
-        alignment: Alignment.center,
+    return ProgressRing(
+      progress: info.progress,
+      color: color,
+      size: 120,
+      strokeWidth: 8,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Circular progress ring
-          SizedBox(
-            width: 120,
-            height: 120,
-            child: CircularProgressIndicator(
-              value: info.progress,
-              strokeWidth: 8,
-              strokeCap: StrokeCap.round,
-              backgroundColor: color.withValues(alpha: 0.12),
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
+          Text(
+            '${info.level}',
+            style: AppText.readout(size: 48, color: color, letterSpacing: -1),
           ),
-          // Level number — dominant stat
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${info.level}',
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                  height: 1.0,
-                  letterSpacing: -1,
-                ),
-              ),
-              Text(
-                info.rank.toUpperCase(),
-                style: GoogleFonts.barlowCondensed(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ],
+          Text(
+            info.rank.toUpperCase(),
+            style: AppText.unit(secondaire).copyWith(letterSpacing: 1.6),
           ),
         ],
       ),
@@ -228,7 +194,7 @@ class LevelMedallion extends StatelessWidget {
   }
 }
 
-/// Pastille de série — icône flamme + nombre de jours.
+/// Pastille de série — flamme et durée.
 class StreakPill extends StatelessWidget {
   const StreakPill({super.key, required this.label, this.active = true});
 
@@ -237,10 +203,9 @@ class StreakPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final couleur = active
         ? AppTheme.streak
-        : theme.colorScheme.onSurfaceVariant;
+        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -252,23 +217,96 @@ class StreakPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.local_fire_department,
-            size: 12,
-            color: couleur,
-          ),
+          Icon(CupertinoIcons.flame_fill, size: 11, color: couleur),
           const SizedBox(width: 3),
           Text(
             label,
-            style: GoogleFonts.barlowCondensed(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            style: AppText.readout(
+              size: 12,
               color: couleur,
+              weight: FontWeight.w600,
               letterSpacing: 0.3,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Contrôle segmenté glissant, au format iOS, avec l'étiquette de groupe.
+///
+/// Remplace le SegmentedButton de Material : sur iOS, un choix parmi quelques
+/// options se fait avec un segmenté glissant, jamais avec des boutons cochés.
+class AppSegmented<T extends Object> extends StatelessWidget {
+  const AppSegmented({
+    super.key,
+    required this.value,
+    required this.children,
+    required this.onChanged,
+  });
+
+  final T value;
+  final Map<T, Widget> children;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<T>(
+        groupValue: value,
+        backgroundColor: CupertinoDynamicColor.resolve(AppTheme.field, context),
+        thumbColor: CupertinoDynamicColor.resolve(AppTheme.card, context),
+        padding: const EdgeInsets.all(3),
+        onValueChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+        children: children,
+      ),
+    );
+  }
+}
+
+/// Libellé d'un segment : texte principal, et sous-titre chiffré facultatif.
+class SegmentLabel extends StatelessWidget {
+  const SegmentLabel(this.text, {super.key, this.detail});
+
+  final String text;
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    // Pas de rembourrage vertical : le contrôle segmenté d'iOS fixe lui-même
+    // sa hauteur, et un libellé à deux lignes la dépasse sinon.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: AppText.body(label, size: 13).copyWith(height: 1.15),
+        ),
+        if (detail != null)
+          Text(
+            detail!,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: AppText.readout(
+              size: 11,
+              color: secondaire,
+              weight: FontWeight.w600,
+            ),
+          ),
+      ],
     );
   }
 }

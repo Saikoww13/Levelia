@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
+import 'domain/models/app_data.dart';
 import 'state/providers.dart';
 import 'ui/shell/app_shell.dart';
 
@@ -14,15 +15,19 @@ class LeveliaApp extends ConsumerWidget {
     final etat = ref.watch(appControllerProvider);
 
     // La préférence d'apparence vit dans les données : tant qu'elles ne sont
-    // pas chargées, on suit le système.
-    final modeTheme = etat.valueOrNull?.themeMode ?? ThemeMode.system;
+    // pas chargées, on suit le système. `null` laisse Cupertino se caler sur
+    // le réglage de l'appareil, comme le fait une application iOS native.
+    final mode = etat.valueOrNull?.themeMode ?? AppearanceMode.system;
+    final luminosite = switch (mode) {
+      AppearanceMode.system => null,
+      AppearanceMode.light => Brightness.light,
+      AppearanceMode.dark => Brightness.dark,
+    };
 
-    return MaterialApp(
+    return CupertinoApp(
       title: 'Levelia',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: modeTheme,
+      theme: AppTheme.theme(luminosite),
       home: etat.when(
         data: (_) => const AppShell(),
         loading: () => const _BootScreen(),
@@ -38,17 +43,14 @@ class _BootScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
+    return const CupertinoPageScaffold(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('⚔️', style: TextStyle(fontSize: 44)),
-            SizedBox(height: 20),
-            SizedBox(
-              width: 120,
-              child: LinearProgressIndicator(minHeight: 4),
-            ),
+            SizedBox(height: 24),
+            CupertinoActivityIndicator(radius: 12),
           ],
         ),
       ),
@@ -64,29 +66,46 @@ class _ErrorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, size: 48),
-                Gaps.h16,
-                const Text(
-                  'Impossible de charger tes données',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                Gaps.h8,
-                Text(message, textAlign: TextAlign.center),
-                Gaps.h24,
-                FilledButton(
-                  onPressed: () => ref.invalidate(appControllerProvider),
-                  child: const Text('Réessayer'),
-                ),
-              ],
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return CupertinoPageScaffold(
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.exclamationmark_triangle,
+                    size: 44,
+                    color: AppTheme.missed,
+                  ),
+                  Gaps.h16,
+                  Text(
+                    'Impossible de charger tes données',
+                    textAlign: TextAlign.center,
+                    style: AppText.title(label, size: 18),
+                  ),
+                  Gaps.h8,
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: AppText.caption(secondaire),
+                  ),
+                  Gaps.h24,
+                  CupertinoButton.filled(
+                    onPressed: () => ref.invalidate(appControllerProvider),
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

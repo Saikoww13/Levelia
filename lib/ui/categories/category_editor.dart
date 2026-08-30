@@ -1,21 +1,21 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/seed.dart';
 import '../../domain/models/category.dart';
 import '../../state/providers.dart';
-import '../widgets/sheet.dart';
+import '../widgets/common.dart';
+import '../widgets/modal_page.dart';
 
-/// Ouvre l'éditeur de catégorie, en création ou en modification.
+/// Ouvre l'éditeur de domaine, en création ou en modification.
 Future<void> openCategoryEditor(
   BuildContext context,
   WidgetRef ref, {
   Category? category,
 }) {
-  return showAppSheet(
+  return showAppModal<void>(
     context: context,
-    title: category == null ? 'Nouvelle catégorie' : 'Modifier la catégorie',
     builder: (_) => _CategoryEditor(category: category),
   );
 }
@@ -30,16 +30,17 @@ class _CategoryEditor extends ConsumerStatefulWidget {
 }
 
 class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nom;
   late String _emoji;
   late int _couleur;
+  bool _enregistrement = false;
 
   @override
   void initState() {
     super.initState();
     final categorie = widget.category;
-    _nom = TextEditingController(text: categorie?.name ?? '');
+    _nom = TextEditingController(text: categorie?.name ?? '')
+      ..addListener(() => setState(() {}));
     _emoji = categorie?.emoji ?? categoryEmojis.first;
     _couleur = categorie?.colorValue ?? categoryPalette.first;
   }
@@ -51,171 +52,156 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
   }
 
   Future<void> _enregistrer() async {
-    if (!_formKey.currentState!.validate()) return;
-    final controleur = ref.read(appControllerProvider.notifier);
-    final existante = widget.category;
+    setState(() => _enregistrement = true);
+    try {
+      final controleur = ref.read(appControllerProvider.notifier);
+      final existante = widget.category;
 
-    if (existante == null) {
-      await controleur.addCategory(
-        name: _nom.text,
-        emoji: _emoji,
-        colorValue: _couleur,
-      );
-    } else {
-      await controleur.updateCategory(
-        existante.copyWith(
-          name: _nom.text.trim(),
+      if (existante == null) {
+        await controleur.addCategory(
+          name: _nom.text,
           emoji: _emoji,
           colorValue: _couleur,
-        ),
+        );
+      } else {
+        await controleur.updateCategory(
+          existante.copyWith(
+            name: _nom.text.trim(),
+            emoji: _emoji,
+            colorValue: _couleur,
+          ),
+        );
+      }
+
+      if (mounted) Navigator.of(context).pop();
+    } catch (erreur) {
+      if (!mounted) return;
+      setState(() => _enregistrement = false);
+      await showNotice(
+        context,
+        title: 'Enregistrement impossible',
+        message:
+            'Tes données n\'ont pas pu être écrites sur l\'appareil.\n\n$erreur',
       );
     }
-
-    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final valide = _nom.text.trim().isNotEmpty;
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Color(_couleur).withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Color(_couleur).withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Text(_emoji, style: const TextStyle(fontSize: 26)),
-              ),
-              Gaps.w16,
-              Expanded(
-                child: TextFormField(
-                  controller: _nom,
-                  autofocus: widget.category == null,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Nom du domaine',
-                    hintText: 'Ex. : Sport, Finances, Créativité',
-                  ),
-                  validator: (valeur) =>
-                      (valeur ?? '').trim().isEmpty ? 'Donne un nom' : null,
+    return AppFormPage(
+      title: widget.category == null ? 'Nouveau domaine' : 'Modifier',
+      actionLabel: widget.category == null ? 'Créer' : 'OK',
+      onAction: valide && !_enregistrement ? _enregistrer : null,
+      onDelete: widget.category == null ? null : _confirmerSuppression,
+      deleteLabel: 'Supprimer le domaine',
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Color(_couleur).withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Color(_couleur).withValues(alpha: 0.5),
                 ),
               ),
-            ],
-          ),
-
-          Gaps.h24,
-          Text(
-            'SYMBOLE',
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant,
+              child: Text(_emoji, style: const TextStyle(fontSize: 26)),
             ),
-          ),
-          Gaps.h8,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final emoji in categoryEmojis)
-                GestureDetector(
-                  onTap: () => setState(() => _emoji = emoji),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
+            Gaps.w16,
+            Expanded(
+              child: AppTextField(
+                controller: _nom,
+                placeholder: 'Ex. : Sport, Finances, Créativité',
+                autofocus: widget.category == null,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+            ),
+          ],
+        ),
+
+        Gaps.h24,
+        const FormLabel('Symbole'),
+        Gaps.h8,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final emoji in categoryEmojis)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _emoji = emoji),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(11),
+                    color: _emoji == emoji
+                        ? AppTheme.seed.withValues(alpha: 0.16)
+                        : CupertinoDynamicColor.resolve(
+                            AppTheme.field,
+                            context,
+                          ),
+                    border: Border.all(
                       color: _emoji == emoji
-                          ? theme.colorScheme.primaryContainer
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: _emoji == emoji
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant,
-                      ),
+                          ? AppTheme.seed
+                          : CupertinoDynamicColor.resolve(
+                              AppTheme.separator,
+                              context,
+                            ),
+                      width: _emoji == emoji ? 1.5 : 0.5,
                     ),
-                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
                   ),
+                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
                 ),
-            ],
-          ),
-
-          Gaps.h24,
-          Text(
-            'COULEUR',
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 1.1,
-              fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Gaps.h8,
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (final valeur in categoryPalette)
-                GestureDetector(
-                  onTap: () => setState(() => _couleur = valeur),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Color(valeur),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _couleur == valeur
-                            ? theme.colorScheme.onSurface
-                            : Colors.transparent,
-                        width: 3,
-                      ),
-                    ),
-                    child: _couleur == valeur
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 20,
-                          )
-                        : null,
-                  ),
-                ),
-            ],
-          ),
-
-          Gaps.h32,
-          Row(
-            children: [
-              if (widget.category != null)
-                TextButton.icon(
-                  onPressed: _confirmerSuppression,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Supprimer'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error,
-                  ),
-                ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _enregistrer,
-                child: Text(widget.category == null ? 'Créer' : 'Enregistrer'),
               ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
+
+        Gaps.h24,
+        const FormLabel('Couleur'),
+        Gaps.h8,
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final valeur in categoryPalette)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _couleur = valeur),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(valeur),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _couleur == valeur
+                          ? CupertinoDynamicColor.resolve(
+                              AppTheme.label,
+                              context,
+                            )
+                          : const Color(0x00000000),
+                      width: 3,
+                    ),
+                  ),
+                  child: _couleur == valeur
+                      ? const Icon(
+                          CupertinoIcons.check_mark,
+                          color: CupertinoColors.white,
+                          size: 20,
+                        )
+                      : null,
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -225,28 +211,15 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
     final habitudes = data.habitsOf(categorie.id).length;
     final objectifs = data.goalsOf(categorie.id).length;
 
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (contexte) => AlertDialog(
-        title: Text('Supprimer « ${categorie.name} » ?'),
-        content: Text(
+    final confirme = await confirmDestructive(
+      context,
+      title: 'Supprimer « ${categorie.name} » ?',
+      message:
           'Cette action effacera $habitudes habitude(s), $objectifs objectif(s) '
           'et les ${categorie.xp} XP du domaine. Ton niveau global baissera d\'autant.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexte).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexte).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
     );
 
-    if (confirme != true || !mounted) return;
+    if (!confirme || !mounted) return;
     await ref.read(appControllerProvider.notifier).deleteCategory(categorie.id);
     if (mounted) Navigator.of(context).pop();
   }

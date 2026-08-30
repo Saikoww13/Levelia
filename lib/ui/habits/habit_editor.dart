@@ -1,31 +1,30 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
 import '../widgets/common.dart';
-import '../widgets/sheet.dart';
+import '../widgets/level_widgets.dart';
+import '../widgets/modal_page.dart';
 
 /// Ouvre l'éditeur d'habitude, en création ou en modification.
 Future<void> openHabitEditor(
   BuildContext context,
   WidgetRef ref, {
   Habit? habit,
-}) {
+}) async {
   final data = ref.read(appDataProvider);
   if (data.activeCategories.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Crée d\'abord une catégorie dans l\'onglet Profil.'),
-      ),
+    return showNotice(
+      context,
+      title: 'Aucun domaine',
+      message: 'Crée d\'abord un domaine dans l\'onglet Profil.',
     );
-    return Future.value();
   }
 
-  return showAppSheet(
+  return showAppModal<void>(
     context: context,
-    title: habit == null ? 'Nouvelle habitude' : 'Modifier l\'habitude',
     builder: (_) => _HabitEditor(habit: habit),
   );
 }
@@ -40,7 +39,6 @@ class _HabitEditor extends ConsumerStatefulWidget {
 }
 
 class _HabitEditorState extends ConsumerState<_HabitEditor> {
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titre;
   late final TextEditingController _note;
 
@@ -60,8 +58,12 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
     final habitude = widget.habit;
     final data = ref.read(appDataProvider);
 
-    _titre = TextEditingController(text: habitude?.title ?? '');
+    _titre = TextEditingController(text: habitude?.title ?? '')
+      // Le bouton de validation s'active dès que l'intitulé n'est plus vide :
+      // sur iOS on désactive l'action plutôt que d'afficher une erreur après coup.
+      ..addListener(() => setState(() {}));
     _note = TextEditingController(text: habitude?.note ?? '');
+
     _categorieId = habitude?.categoryId ?? data.activeCategories.first.id;
     _polarite = habitude?.polarity ?? HabitPolarity.positive;
     _difficulte = habitude?.difficulty ?? HabitDifficulty.normal;
@@ -90,15 +92,14 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
     ScheduleKind.timesPerWeek => HabitSchedule.timesAWeek(_foisParSemaine),
   };
 
-  Future<void> _enregistrer() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_typePlanif == ScheduleKind.weekdays && _jours.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choisis au moins un jour.')),
-      );
-      return;
-    }
+  /// L'action de validation n'est proposée que si le formulaire est complet.
+  bool get _valide {
+    if (_titre.text.trim().isEmpty) return false;
+    if (_typePlanif == ScheduleKind.weekdays && _jours.isEmpty) return false;
+    return true;
+  }
 
+  Future<void> _enregistrer() async {
     setState(() => _enregistrement = true);
     try {
       final controleur = ref.read(appControllerProvider.notifier);
@@ -129,250 +130,271 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
       }
 
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) setState(() => _enregistrement = false);
+    } catch (erreur) {
+      if (!mounted) return;
+      setState(() => _enregistrement = false);
+      // Débloquer le bouton ne suffit pas : sans message, l'utilisateur
+      // rappuierait sans comprendre pourquoi rien ne se passe.
+      await showNotice(
+        context,
+        title: 'Enregistrement impossible',
+        message:
+            'Tes données n\'ont pas pu être écrites sur l\'appareil.\n\n$erreur',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider);
-    final theme = Theme.of(context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: _titre,
-            autofocus: widget.habit == null,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Intitulé',
-              hintText: 'Ex. : lire 10 pages',
-            ),
-            validator: (valeur) => (valeur ?? '').trim().isEmpty
-                ? 'Donne un intitulé à ton habitude'
-                : null,
-          ),
-          Gaps.h12,
-          TextFormField(
-            controller: _note,
-            maxLines: 2,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Note (facultatif)',
-              hintText: 'Une précision qui t\'aide à t\'y tenir',
-            ),
-          ),
+    return AppFormPage(
+      title: widget.habit == null ? 'Nouvelle habitude' : 'Modifier',
+      actionLabel: widget.habit == null ? 'Créer' : 'OK',
+      onAction: _valide && !_enregistrement ? _enregistrer : null,
+      onDelete: widget.habit == null ? null : _confirmerSuppression,
+      deleteLabel: 'Supprimer l\'habitude',
+      children: [
+        AppTextField(
+          controller: _titre,
+          placeholder: 'Ex. : lire 10 pages',
+          autofocus: widget.habit == null,
+        ),
+        Gaps.h8,
+        AppTextField(
+          controller: _note,
+          placeholder: 'Note (facultatif)',
+          maxLines: 2,
+        ),
 
-          Gaps.h24,
-          const FormLabel('Catégorie'),
-          Gaps.h8,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final categorie in data.activeCategories)
-                ChoiceChip(
-                  avatar: Text(categorie.emoji),
-                  label: Text(categorie.name),
-                  selected: _categorieId == categorie.id,
-                  selectedColor: categorie.color.withValues(alpha: 0.22),
-                  onSelected: (_) =>
-                      setState(() => _categorieId = categorie.id),
-                ),
-            ],
-          ),
-
-          Gaps.h24,
-          const FormLabel('Type'),
-          Gaps.h8,
-          SegmentedButton<HabitPolarity>(
-            segments: const [
-              ButtonSegment(
-                value: HabitPolarity.positive,
-                icon: Icon(Icons.add_task),
-                label: Text('À faire'),
+        Gaps.h24,
+        const FormLabel('Domaine'),
+        Gaps.h8,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final categorie in data.activeCategories)
+              _CategoryPill(
+                emoji: categorie.emoji,
+                name: categorie.name,
+                color: categorie.color,
+                selected: _categorieId == categorie.id,
+                onTap: () => setState(() => _categorieId = categorie.id),
               ),
-              ButtonSegment(
-                value: HabitPolarity.negative,
-                icon: Icon(Icons.block),
-                label: Text('À éviter'),
-              ),
-            ],
-            selected: {_polarite},
-            onSelectionChanged: (choix) =>
-                setState(() => _polarite = choix.first),
-          ),
-          Gaps.h8,
-          Text(
-            _polarite == HabitPolarity.negative
-                ? 'La journée est réussie si tu ne craques pas.'
-                : 'La journée est réussie si tu la fais.',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-
-          Gaps.h24,
-          const FormLabel('Exigence'),
-          Gaps.h8,
-          SegmentedButton<HabitDifficulty>(
-            segments: [
-              for (final d in HabitDifficulty.values)
-                ButtonSegment(
-                  value: d,
-                  label: Text('${d.label}\n+${d.xp} XP', textAlign: TextAlign.center),
-                ),
-            ],
-            selected: {_difficulte},
-            onSelectionChanged: (choix) =>
-                setState(() => _difficulte = choix.first),
-          ),
-
-          Gaps.h24,
-          const FormLabel('Pénalité si manquée'),
-          Gaps.h8,
-          SegmentedButton<HabitPenalty>(
-            segments: [
-              for (final p in HabitPenalty.values)
-                ButtonSegment(
-                  value: p,
-                  label: Text(
-                    p == HabitPenalty.none ? p.label : '${p.label}\n-${p.xp} XP',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-            ],
-            selected: {_penalite},
-            onSelectionChanged: (choix) =>
-                setState(() => _penalite = choix.first),
-          ),
-          Gaps.h8,
-          Text(
-            _penalite == HabitPenalty.none
-                ? 'Aucune XP n\'est retirée si tu manques cette habitude.'
-                : 'Manquer cette habitude te coûtera ${_penalite.xp} XP.',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-
-          Gaps.h24,
-          const FormLabel('Rythme'),
-          Gaps.h8,
-          SegmentedButton<ScheduleKind>(
-            segments: const [
-              ButtonSegment(
-                value: ScheduleKind.daily,
-                label: Text('Chaque jour'),
-              ),
-              ButtonSegment(
-                value: ScheduleKind.weekdays,
-                label: Text('Jours choisis'),
-              ),
-              ButtonSegment(
-                value: ScheduleKind.timesPerWeek,
-                label: Text('N× / semaine'),
-              ),
-            ],
-            selected: {_typePlanif},
-            onSelectionChanged: (choix) =>
-                setState(() => _typePlanif = choix.first),
-          ),
-          if (_typePlanif == ScheduleKind.weekdays) ...[
-            Gaps.h12,
-            _WeekdayPicker(
-              selected: _jours,
-              onChanged: (jours) => setState(() => _jours = jours),
-            ),
           ],
-          if (_typePlanif == ScheduleKind.timesPerWeek) ...[
-            Gaps.h12,
-            Row(
-              children: [
-                Expanded(
-                  child: Slider(
-                    value: _foisParSemaine.toDouble(),
-                    min: 1,
-                    max: 7,
-                    divisions: 6,
-                    label: '$_foisParSemaine',
-                    onChanged: (v) =>
-                        setState(() => _foisParSemaine = v.round()),
-                  ),
-                ),
-                SizedBox(
-                  width: 92,
-                  child: Text(
-                    '$_foisParSemaine fois',
-                    style: theme.textTheme.labelLarge,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              'La série se compte alors en semaines réussies, pas en jours.',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        ),
 
-          Gaps.h32,
+        Gaps.h24,
+        const FormLabel('Type'),
+        Gaps.h8,
+        AppSegmented<HabitPolarity>(
+          value: _polarite,
+          onChanged: (v) => setState(() => _polarite = v),
+          children: const {
+            HabitPolarity.positive: SegmentLabel('À faire'),
+            HabitPolarity.negative: SegmentLabel('À éviter'),
+          },
+        ),
+        Gaps.h8,
+        _Hint(
+          _polarite == HabitPolarity.negative
+              ? 'La journée est réussie si tu ne craques pas.'
+              : 'La journée est réussie si tu la fais.',
+          color: secondaire,
+        ),
+
+        Gaps.h24,
+        const FormLabel('Exigence'),
+        Gaps.h8,
+        AppSegmented<HabitDifficulty>(
+          value: _difficulte,
+          onChanged: (v) => setState(() => _difficulte = v),
+          children: {
+            for (final d in HabitDifficulty.values)
+              d: SegmentLabel(d.label, detail: '+${d.xp} XP'),
+          },
+        ),
+
+        Gaps.h24,
+        const FormLabel('Pénalité si manquée'),
+        Gaps.h8,
+        AppSegmented<HabitPenalty>(
+          value: _penalite,
+          onChanged: (v) => setState(() => _penalite = v),
+          children: {
+            for (final p in HabitPenalty.values)
+              p: SegmentLabel(
+                p.label,
+                detail: p == HabitPenalty.none ? null : '-${p.xp} XP',
+              ),
+          },
+        ),
+        Gaps.h8,
+        _Hint(
+          _penalite == HabitPenalty.none
+              ? 'Aucune XP n\'est retirée si tu manques cette habitude.'
+              : 'Manquer cette habitude te coûtera ${_penalite.xp} XP.',
+          color: secondaire,
+        ),
+
+        Gaps.h24,
+        const FormLabel('Rythme'),
+        Gaps.h8,
+        AppSegmented<ScheduleKind>(
+          value: _typePlanif,
+          onChanged: (v) => setState(() => _typePlanif = v),
+          children: const {
+            ScheduleKind.daily: SegmentLabel('Chaque jour'),
+            ScheduleKind.weekdays: SegmentLabel('Jours choisis'),
+            ScheduleKind.timesPerWeek: SegmentLabel('N× / sem.'),
+          },
+        ),
+        if (_typePlanif == ScheduleKind.weekdays) ...[
+          Gaps.h16,
+          _WeekdayPicker(
+            selected: _jours,
+            onChanged: (jours) => setState(() => _jours = jours),
+          ),
+          if (_jours.isEmpty) ...[
+            Gaps.h8,
+            _Hint('Choisis au moins un jour.', color: AppTheme.missed),
+          ],
+        ],
+        if (_typePlanif == ScheduleKind.timesPerWeek) ...[
+          Gaps.h16,
           Row(
             children: [
-              if (widget.habit != null)
-                TextButton.icon(
-                  onPressed: _enregistrement ? null : _confirmerSuppression,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('Supprimer'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.error,
-                  ),
+              Expanded(
+                child: CupertinoSlider(
+                  value: _foisParSemaine.toDouble(),
+                  min: 1,
+                  max: 7,
+                  divisions: 6,
+                  activeColor: AppTheme.seed,
+                  onChanged: (v) => setState(() => _foisParSemaine = v.round()),
                 ),
-              const Spacer(),
-              FilledButton(
-                onPressed: _enregistrement ? null : _enregistrer,
+              ),
+              SizedBox(
+                width: 76,
                 child: Text(
-                  widget.habit == null ? 'Créer' : 'Enregistrer',
+                  '$_foisParSemaine / sem.',
+                  textAlign: TextAlign.end,
+                  style: AppText.readout(
+                    size: 15,
+                    color: CupertinoDynamicColor.resolve(
+                      AppTheme.label,
+                      context,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
+          Gaps.h8,
+          _Hint(
+            'La série se compte alors en semaines réussies, pas en jours.',
+            color: secondaire,
+          ),
         ],
-      ),
+      ],
     );
   }
 
   Future<void> _confirmerSuppression() async {
     final habitude = widget.habit!;
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (contexte) => AlertDialog(
-        title: const Text('Supprimer cette habitude ?'),
-        content: Text(
+    final confirme = await confirmDestructive(
+      context,
+      title: 'Supprimer cette habitude ?',
+      message:
           'Tous les pointages de « ${habitude.title} » seront effacés. '
           'L\'XP déjà gagnée reste acquise.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexte).pop(false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexte).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
     );
 
-    if (confirme != true || !mounted) return;
+    if (!confirme || !mounted) return;
     await ref.read(appControllerProvider.notifier).deleteHabit(habitude.id);
     if (mounted) Navigator.of(context).pop();
+  }
+}
+
+/// Explication discrète sous un contrôle.
+class _Hint extends StatelessWidget {
+  const _Hint(this.text, {required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(text, style: AppText.caption(color, size: 12)),
+    );
+  }
+}
+
+/// Capsule de sélection d'un domaine.
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({
+    required this.emoji,
+    required this.name,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String emoji;
+  final String name;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final texte = selected
+        ? color
+        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? color.withValues(alpha: 0.16)
+              : CupertinoDynamicColor.resolve(AppTheme.field, context),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected
+                ? color.withValues(alpha: 0.45)
+                : CupertinoDynamicColor.resolve(AppTheme.separator, context),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 14)),
+            Gaps.w4,
+            Text(
+              name,
+              style: TextStyle(
+                fontFamily: '.SF Pro Text',
+                fontSize: 14,
+                letterSpacing: -0.2,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: texte,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -386,36 +408,45 @@ class _WeekdayPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const initiales = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-    final theme = Theme.of(context);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         for (var jour = 1; jour <= 7; jour++)
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () {
               final suivant = {...selected};
               if (!suivant.remove(jour)) suivant.add(jour);
               onChanged(suivant);
             },
             child: Container(
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: selected.contains(jour)
-                    ? theme.colorScheme.primary
-                    : Colors.transparent,
-                border: Border.all(color: theme.colorScheme.outlineVariant),
+                    ? AppTheme.seed
+                    : CupertinoDynamicColor.resolve(AppTheme.field, context),
+                border: Border.all(
+                  color: CupertinoDynamicColor.resolve(
+                    AppTheme.separator,
+                    context,
+                  ),
+                  width: 0.5,
+                ),
               ),
               child: Text(
                 initiales[jour - 1],
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: selected.contains(jour)
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.onSurfaceVariant,
+                style: AppText.title(
+                  selected.contains(jour)
+                      ? CupertinoColors.white
+                      : CupertinoDynamicColor.resolve(
+                          AppTheme.secondaryLabel,
+                          context,
+                        ),
+                  size: 15,
                 ),
               ),
             ),
@@ -424,4 +455,3 @@ class _WeekdayPicker extends StatelessWidget {
     );
   }
 }
-

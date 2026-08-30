@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/util/day.dart';
+import '../../domain/models/app_data.dart';
 import '../../state/providers.dart';
 import '../categories/category_editor.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
-import '../widgets/sheet.dart';
+import '../widgets/modal_page.dart';
 
 /// La fiche de personnage : niveau global, domaines, et réglages.
 class ProfileScreen extends ConsumerWidget {
@@ -17,205 +18,173 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(appDataProvider);
-    final theme = Theme.of(context);
     final niveau = data.globalLevel;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          AppCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                LevelMedallion(
-                  info: niveau,
-                  color: theme.colorScheme.primary,
-                ),
-                Gaps.h16,
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        data.profileName,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Changer de nom',
-                      onPressed: () => _renommer(context, ref, data.profileName),
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                    ),
-                  ],
-                ),
-                Text(
-                  niveau.rank,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Gaps.h16,
-                Text(
-                  niveau.xpForNextLevel <= 0
-                      ? '${niveau.totalXp} XP au compteur'
-                      : 'Encore ${niveau.xpRemaining} XP avant le niveau ${niveau.level + 1}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
 
-          Gaps.h24,
-          SectionTitle(
-            title: 'Domaines',
-            trailing: TextButton.icon(
-              onPressed: () => openCategoryEditor(context, ref),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Ajouter'),
-            ),
-          ),
-          if (data.activeCategories.isEmpty)
-            const AppCard(
-              child: Text(
-                'Crée un premier domaine pour y ranger tes habitudes et tes objectifs.',
-              ),
-            )
-          else
-            for (final categorie in data.activeCategories) ...[
-              AppCard(
-                accent: categorie.color,
-                onTap: () =>
-                    openCategoryEditor(context, ref, category: categorie),
-                child: Row(
-                  children: [
-                    CategoryAvatar(category: categorie, size: 42),
-                    Gaps.w12,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  categorie.name,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                plural(
-                                  data.habitsOf(categorie.id).length,
-                                  'habitude',
-                                ),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Gaps.h8,
-                          XpBar(
-                            info: categorie.levelInfo,
-                            color: categorie.color,
-                            compact: true,
-                          ),
-                        ],
-                      ),
+    return AppPage(
+      title: 'Profil',
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              LevelMedallion(info: niveau, color: AppTheme.seed),
+              Gaps.h16,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      data.profileName,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.title(label, size: 20),
                     ),
-                  ],
-                ),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(34, 34),
+                    onPressed: () => _renommer(context, ref, data.profileName),
+                    child: Icon(
+                      CupertinoIcons.pencil,
+                      size: 17,
+                      color: AppTheme.seed,
+                      semanticLabel: 'Changer de nom',
+                    ),
+                  ),
+                ],
               ),
               Gaps.h8,
+              Text(
+                niveau.xpForNextLevel <= 0
+                    ? '${niveau.totalXp} XP au compteur'
+                    : 'Encore ${niveau.xpRemaining} XP avant le niveau ${niveau.level + 1}',
+                textAlign: TextAlign.center,
+                style: AppText.caption(secondaire),
+              ),
             ],
-
-          Gaps.h24,
-          const SectionTitle(title: 'Apparence'),
-          AppCard(
-            child: SegmentedButton<ThemeMode>(
-              segments: const [
-                ButtonSegment(
-                  value: ThemeMode.system,
-                  icon: Icon(Icons.brightness_auto),
-                  label: Text('Auto'),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.light,
-                  icon: Icon(Icons.light_mode),
-                  label: Text('Clair'),
-                ),
-                ButtonSegment(
-                  value: ThemeMode.dark,
-                  icon: Icon(Icons.dark_mode),
-                  label: Text('Sombre'),
-                ),
-              ],
-              selected: {data.themeMode},
-              onSelectionChanged: (choix) => ref
-                  .read(appControllerProvider.notifier)
-                  .setThemeMode(choix.first),
-            ),
           ),
+        ),
 
-          Gaps.h24,
-          const SectionTitle(title: 'Tes données'),
-          AppCard(
+        Gaps.h24,
+        SectionTitle(
+          title: 'Domaines',
+          trailing: CupertinoButton(
             padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.ios_share),
-                  title: const Text('Exporter une sauvegarde'),
-                  subtitle: const Text(
-                    'Copie tout ton historique au format JSON',
-                  ),
-                  onTap: () => _exporter(context, ref),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.download_outlined),
-                  title: const Text('Importer une sauvegarde'),
-                  subtitle: const Text('Remplace les données actuelles'),
-                  onTap: () => _importer(context, ref),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(
-                    Icons.restart_alt,
-                    color: theme.colorScheme.error,
-                  ),
-                  title: Text(
-                    'Tout réinitialiser',
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                  subtitle: const Text('Repart des catégories d\'origine'),
-                  onTap: () => _reinitialiser(context, ref),
-                ),
-              ],
-            ),
+            minimumSize: const Size(0, 28),
+            onPressed: () => openCategoryEditor(context, ref),
+            child: const Text('Ajouter', style: TextStyle(fontSize: 14)),
           ),
-
-          Gaps.h24,
-          Center(
+        ),
+        if (data.activeCategories.isEmpty)
+          AppCard(
             child: Text(
-              'Levelia · tes données restent sur cet appareil',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              'Crée un premier domaine pour y ranger tes habitudes et tes objectifs.',
+              style: AppText.body(secondaire),
+            ),
+          )
+        else
+          for (final categorie in data.activeCategories) ...[
+            AppCard(
+              accent: categorie.color,
+              onTap: () =>
+                  openCategoryEditor(context, ref, category: categorie),
+              child: Row(
+                children: [
+                  CategoryAvatar(category: categorie, size: 40),
+                  Gaps.w12,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                categorie.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.title(label, size: 15),
+                              ),
+                            ),
+                            Text(
+                              plural(
+                                data.habitsOf(categorie.id).length,
+                                'habitude',
+                              ),
+                              style: AppText.caption(secondaire, size: 12),
+                            ),
+                          ],
+                        ),
+                        Gaps.h8,
+                        XpBar(
+                          info: categorie.levelInfo,
+                          color: categorie.color,
+                          compact: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+            Gaps.h8,
+          ],
+
+        Gaps.h24,
+        const SectionTitle(title: 'Apparence'),
+        AppSegmented<AppearanceMode>(
+          value: data.themeMode,
+          onChanged: (mode) =>
+              ref.read(appControllerProvider.notifier).setThemeMode(mode),
+          children: {
+            for (final mode in AppearanceMode.values)
+              mode: SegmentLabel(mode.label),
+          },
+        ),
+
+        Gaps.h24,
+        const SectionTitle(title: 'Tes données'),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _SettingRow(
+                icon: CupertinoIcons.square_arrow_up,
+                title: 'Exporter une sauvegarde',
+                subtitle: 'Copie tout ton historique au format JSON',
+                onTap: () => _exporter(context, ref),
+              ),
+              const _RowDivider(),
+              _SettingRow(
+                icon: CupertinoIcons.square_arrow_down,
+                title: 'Importer une sauvegarde',
+                subtitle: 'Remplace les données actuelles',
+                onTap: () => _importer(context, ref),
+              ),
+              const _RowDivider(),
+              _SettingRow(
+                icon: CupertinoIcons.arrow_counterclockwise,
+                title: 'Tout réinitialiser',
+                subtitle: 'Repart des domaines d\'origine',
+                destructive: true,
+                onTap: () => _reinitialiser(context, ref),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+
+        Gaps.h24,
+        Center(
+          child: Text(
+            'Levelia · tes données restent sur cet appareil',
+            style: AppText.caption(secondaire, size: 12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -224,31 +193,36 @@ class ProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     String actuel,
   ) async {
-    final controleur = TextEditingController(text: actuel);
-    final nom = await showDialog<String>(
+    final saisie = TextEditingController(text: actuel);
+
+    final nom = await showCupertinoDialog<String>(
       context: context,
-      builder: (contexte) => AlertDialog(
+      builder: (contexte) => CupertinoAlertDialog(
         title: const Text('Ton nom'),
-        content: TextField(
-          controller: controleur,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Comment t\'appeler ?'),
-          onSubmitted: (valeur) => Navigator.of(contexte).pop(valeur),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: CupertinoTextField(
+            controller: saisie,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            placeholder: 'Comment t\'appeler ?',
+            onSubmitted: (valeur) => Navigator.of(contexte).pop(valeur),
+          ),
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.of(contexte).pop(),
             child: const Text('Annuler'),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexte).pop(controleur.text),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(contexte).pop(saisie.text),
             child: const Text('Valider'),
           ),
         ],
       ),
     );
-    controleur.dispose();
+    saisie.dispose();
 
     if (nom != null && nom.trim().isNotEmpty) {
       await ref.read(appControllerProvider.notifier).renameProfile(nom);
@@ -259,90 +233,178 @@ class ProfileScreen extends ConsumerWidget {
     final json = ref.read(appControllerProvider.notifier).exportJson();
     await Clipboard.setData(ClipboardData(text: json));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Sauvegarde copiée dans le presse-papiers (${json.length} caractères). '
-          'Colle-la dans un fichier pour la conserver.',
-        ),
-      ),
+    await showNotice(
+      context,
+      title: 'Sauvegarde copiée',
+      message:
+          '${json.length} caractères sont dans le presse-papiers. '
+          'Colle-les dans un fichier pour les conserver.',
     );
   }
 
   Future<void> _importer(BuildContext context, WidgetRef ref) async {
-    final saisie = TextEditingController();
-
-    final json = await showAppSheet<String>(
+    final json = await showAppModal<String>(
       context: context,
-      title: 'Importer une sauvegarde',
-      builder: (contexte) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Colle ici le contenu JSON d\'une sauvegarde. Les données actuelles '
-            'seront intégralement remplacées.',
-          ),
-          Gaps.h16,
-          TextField(
-            controller: saisie,
-            maxLines: 8,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            decoration: const InputDecoration(hintText: '{ "schemaVersion": 1, ... }'),
-          ),
-          Gaps.h16,
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton(
-              onPressed: () => Navigator.of(contexte).pop(saisie.text),
-              child: const Text('Importer'),
-            ),
-          ),
-        ],
-      ),
+      builder: (_) => const _ImportPage(),
     );
 
-    saisie.dispose();
     if (json == null || json.trim().isEmpty || !context.mounted) return;
 
     try {
       await ref.read(appControllerProvider.notifier).importJson(json);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Sauvegarde restaurée.')));
+      await showNotice(context, title: 'Sauvegarde restaurée');
     } on FormatException {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ce contenu n\'est pas une sauvegarde valide.'),
-        ),
+      await showNotice(
+        context,
+        title: 'Contenu invalide',
+        message: 'Ce texte n\'est pas une sauvegarde Levelia.',
       );
     }
   }
 
   Future<void> _reinitialiser(BuildContext context, WidgetRef ref) async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (contexte) => AlertDialog(
-        title: const Text('Tout réinitialiser ?'),
-        content: const Text(
+    final confirme = await confirmDestructive(
+      context,
+      title: 'Tout réinitialiser ?',
+      message:
           'Habitudes, objectifs, historique et XP seront effacés sans retour '
           'possible. Pense à exporter une sauvegarde avant.',
+      confirmLabel: 'Réinitialiser',
+    );
+
+    if (!confirme) return;
+    await ref.read(appControllerProvider.notifier).resetAll();
+  }
+}
+
+/// Page modale de collage d'une sauvegarde.
+class _ImportPage extends StatefulWidget {
+  const _ImportPage();
+
+  @override
+  State<_ImportPage> createState() => _ImportPageState();
+}
+
+class _ImportPageState extends State<_ImportPage> {
+  final _saisie = TextEditingController()..addListener(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    _saisie.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _saisie.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+
+    return AppFormPage(
+      title: 'Importer',
+      actionLabel: 'Importer',
+      onAction: _saisie.text.trim().isEmpty
+          ? null
+          : () => Navigator.of(context).pop(_saisie.text),
+      children: [
+        Text(
+          'Colle ici le contenu JSON d\'une sauvegarde. Les données actuelles '
+          'seront intégralement remplacées.',
+          style: AppText.body(secondaire, size: 14),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexte).pop(false),
-            child: const Text('Annuler'),
+        Gaps.h16,
+        AppTextField(
+          controller: _saisie,
+          placeholder: '{ "schemaVersion": 1, … }',
+          maxLines: 10,
+          textCapitalization: TextCapitalization.none,
+          style: const TextStyle(fontFamily: 'Menlo', fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+/// Ligne de réglage, au format des listes iOS.
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final secondaire = CupertinoDynamicColor.resolve(
+      AppTheme.secondaryLabel,
+      context,
+    );
+    final teinte = destructive ? AppTheme.missed : AppTheme.seed;
+
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      minimumSize: Size.zero,
+      onPressed: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: teinte),
+          Gaps.w12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppText.body(destructive ? AppTheme.missed : label),
+                ),
+                const SizedBox(height: 2),
+                Text(subtitle, style: AppText.caption(secondaire, size: 12)),
+              ],
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexte).pop(true),
-            child: const Text('Réinitialiser'),
+          Icon(
+            CupertinoIcons.chevron_forward,
+            size: 15,
+            color: CupertinoDynamicColor.resolve(
+              AppTheme.tertiaryLabel,
+              context,
+            ),
           ),
         ],
       ),
     );
+  }
+}
 
-    if (confirme != true) return;
-    await ref.read(appControllerProvider.notifier).resetAll();
+class _RowDivider extends StatelessWidget {
+  const _RowDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 48),
+      child: Container(
+        height: 0.5,
+        color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
+      ),
+    );
   }
 }

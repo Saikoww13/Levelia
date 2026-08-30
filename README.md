@@ -114,7 +114,7 @@ release réussi sur les deux.
 ```
 lib/
 ├── core/
-│   ├── theme/          Thème Material 3, clair et sombre
+│   ├── theme/          Thème Cupertino, clair et sombre
 │   └── util/day.dart   Journées normalisées à minuit, clés `yyyy-MM-dd`
 ├── domain/             Dart pur, sans Flutter ni stockage — entièrement testé
 │   ├── models/         Category, Habit, HabitLog, Goal, AppData

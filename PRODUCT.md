@@ -34,8 +34,8 @@ The XP and leveling system is per-domain and global — you don't just check off
 - Stats screen with charts
 - Profile screen showing global level + per-category levels
 - Local data only (JSON), no cloud sync
-- Flutter app, Material 3, dark + light mode
-- Adaptive layout: NavigationBar on mobile, NavigationRail on wide screens
+- Flutter app, Cupertino (Apple) widgets throughout, dark + light mode
+- Adaptive layout: CupertinoTabBar on iPhone, sidebar on iPad and Mac
 
 ## Brand Commitments
 
@@ -46,7 +46,7 @@ The XP and leveling system is per-domain and global — you don't just check off
 ## Evidence on Hand
 
 - Full Flutter codebase in c:\dev
-- Existing theme: purple accent #6C63FF, Material 3, rounded cards (20px radius)
+- Theme: steel-blue accent #3A8FD1, dark-first, Cupertino chrome, 12px card radius
 - Existing gamification: XP bars, level medallion, streak pills, XP feedback on habit completion
 
 ## Product Principles
