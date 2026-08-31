@@ -37,6 +37,14 @@ class AppPage extends StatelessWidget {
     final c = AppColors.of(context);
     final secondaire = c.secondary;
 
+    // La barre d'onglets est translucide : le contenu défile dessous, et
+    // Flutter signale la hauteur ainsi masquée — barre plus indicateur
+    // d'accueil — dans `MediaQuery.padding`. Sans la reporter au bas de la
+    // liste, les derniers éléments restent sous la barre quoi qu'on fasse,
+    // puisque le défilement s'arrête avant. En barre latérale, où rien
+    // n'obstrue le bas, cette valeur est nulle et la marge ne bouge pas.
+    final masque = MediaQuery.paddingOf(context).bottom;
+
     return CupertinoPageScaffold(
       child: CustomScrollView(
         slivers: [
@@ -55,7 +63,7 @@ class AppPage extends StatelessWidget {
               ),
             ),
           SliverPadding(
-            padding: padding,
+            padding: padding.copyWith(bottom: padding.bottom + masque),
             sliver: SliverList(
               delegate: SliverChildListDelegate.fixed(children),
             ),

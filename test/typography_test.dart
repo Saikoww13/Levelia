@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart' show FontLoader;
