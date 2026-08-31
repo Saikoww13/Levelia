@@ -13,12 +13,7 @@ import 'package:levelia/state/providers.dart';
 /// Un état de départ maîtrisé : une catégorie vide, une habitude quotidienne.
 AppData _base() => AppData(
   categories: const [
-    Category(
-      id: 'c1',
-      name: 'Corps',
-      emoji: '💪',
-      colorValue: 0xFFFF7043,
-    ),
+    Category(id: 'c1', name: 'Corps', emoji: '💪', colorValue: 0xFFFF7043),
   ],
   habits: [
     Habit(
@@ -150,7 +145,8 @@ void main() {
         expect(
           container.read(appDataProvider).categoryById('c1')!.xp,
           total - 15,
-          reason: 'chaque pointage mémorise le gain qu\'il a réellement produit',
+          reason:
+              'chaque pointage mémorise le gain qu\'il a réellement produit',
         );
       },
     );
@@ -174,9 +170,7 @@ void main() {
       // 100 XP amènent au niveau 2 : on part à 90.
       final depart = _base();
       final (:container, controller: _) = _setup(
-        depart.copyWith(
-          categories: [depart.categories.first.copyWith(xp: 90)],
-        ),
+        depart.copyWith(categories: [depart.categories.first.copyWith(xp: 90)]),
       );
       final controleur = await _ready(container);
       final habit = container.read(appDataProvider).habits.first;
@@ -199,8 +193,8 @@ void main() {
       return b.copyWith(
         habits: [
           b.habits.first.copyWith(
-            difficulty: HabitDifficulty.easy,   // 10 XP
-            penalty: HabitPenalty.severe,        // 25 XP
+            difficulty: HabitDifficulty.easy, // 10 XP
+            penalty: HabitPenalty.severe, // 25 XP
           ),
         ],
       );
@@ -230,30 +224,35 @@ void main() {
       },
     );
 
-    test('pénalité partielle quand l\'XP disponible est insuffisante', () async {
-      // Catégorie à 5 XP avant le pointage. Gain = 10 → XP = 15.
-      // delta = -10 - 25 = -35 → (15 - 35).clamp(0) = 0.
-      // Pénalité réelle = 0 - 15 - (-10) = 5 (les 5 XP hors du gain).
-      final base = baseAvecPenalite();
-      final (:container, controller: _) = _setup(
-        base.copyWith(
-          categories: [base.categories.first.copyWith(xp: 5)],
-        ),
-      );
-      final controleur = await _ready(container);
-      final habit = container.read(appDataProvider).habits.first;
-      final jour = today();
+    test(
+      'pénalité partielle quand l\'XP disponible est insuffisante',
+      () async {
+        // Catégorie à 5 XP avant le pointage. Gain = 10 → XP = 15.
+        // delta = -10 - 25 = -35 → (15 - 35).clamp(0) = 0.
+        // Pénalité réelle = 0 - 15 - (-10) = 5 (les 5 XP hors du gain).
+        final base = baseAvecPenalite();
+        final (:container, controller: _) = _setup(
+          base.copyWith(categories: [base.categories.first.copyWith(xp: 5)]),
+        );
+        final controleur = await _ready(container);
+        final habit = container.read(appDataProvider).habits.first;
+        final jour = today();
 
-      await controleur.cycleHabit(habit, jour); // réussi  → XP = 15
-      await controleur.cycleHabit(habit, jour); // manqué  → XP = 0
-      await controleur.cycleHabit(habit, jour); // effacé  → XP doit revenir à 5
+        await controleur.cycleHabit(habit, jour); // réussi  → XP = 15
+        await controleur.cycleHabit(habit, jour); // manqué  → XP = 0
+        await controleur.cycleHabit(
+          habit,
+          jour,
+        ); // effacé  → XP doit revenir à 5
 
-      expect(
-        container.read(appDataProvider).categoryById('c1')!.xp,
-        5,
-        reason: 'effacer restitue la pénalité réelle, pas la pénalité nominale',
-      );
-    });
+        expect(
+          container.read(appDataProvider).categoryById('c1')!.xp,
+          5,
+          reason:
+              'effacer restitue la pénalité réelle, pas la pénalité nominale',
+        );
+      },
+    );
 
     test(
       'régression : pénalité sévère sur catégorie vierge ne crée pas d\'XP',
@@ -280,7 +279,8 @@ void main() {
         expect(
           logManque?.xpPenaltyApplied,
           0,
-          reason: 'xpPenaltyApplied doit refléter ce qui a été réellement prélevé, '
+          reason:
+              'xpPenaltyApplied doit refléter ce qui a été réellement prélevé, '
               'pas la valeur nominale de la pénalité',
         );
 
@@ -301,9 +301,7 @@ void main() {
       // Effacer : XP revient à 100.
       final base = baseAvecPenalite();
       final (:container, controller: _) = _setup(
-        base.copyWith(
-          categories: [base.categories.first.copyWith(xp: 100)],
-        ),
+        base.copyWith(categories: [base.categories.first.copyWith(xp: 100)]),
       );
       final controleur = await _ready(container);
       final habit = container.read(appDataProvider).habits.first;
@@ -311,12 +309,12 @@ void main() {
 
       await controleur.cycleHabit(habit, jour); // réussi  → XP = 110
       await controleur.cycleHabit(habit, jour); // manqué  → XP = 75
-      await controleur.cycleHabit(habit, jour); // effacé  → XP doit revenir à 100
+      await controleur.cycleHabit(
+        habit,
+        jour,
+      ); // effacé  → XP doit revenir à 100
 
-      expect(
-        container.read(appDataProvider).categoryById('c1')!.xp,
-        100,
-      );
+      expect(container.read(appDataProvider).categoryById('c1')!.xp, 100);
     });
   });
 
@@ -343,10 +341,7 @@ void main() {
         container.read(appDataProvider).categoryById('c1')!.xp,
         Milestone.xpReward,
       );
-      expect(
-        container.read(appDataProvider).goalById('g1')!.milestonesDone,
-        1,
-      );
+      expect(container.read(appDataProvider).goalById('g1')!.milestonesDone, 1);
 
       await controleur.toggleMilestone('g1', 'm1');
       expect(container.read(appDataProvider).categoryById('c1')!.xp, 0);
@@ -357,12 +352,7 @@ void main() {
       final (:container, controller: _) = _setup(
         depart.copyWith(
           goals: [
-            Goal(
-              id: 'g1',
-              title: 'Test',
-              categoryId: 'c1',
-              createdAt: today(),
-            ),
+            Goal(id: 'g1', title: 'Test', categoryId: 'c1', createdAt: today()),
           ],
         ),
       );

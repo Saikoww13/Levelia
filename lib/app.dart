@@ -66,11 +66,9 @@ class _ErrorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return CupertinoPageScaffold(
       child: SafeArea(

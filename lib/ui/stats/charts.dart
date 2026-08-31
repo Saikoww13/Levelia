@@ -26,14 +26,9 @@ class CompletionHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
-    final vide = CupertinoDynamicColor.resolve(
-      AppTheme.separator,
-      context,
-    ).withValues(alpha: 0.55);
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
+    final vide = c.separator.withValues(alpha: 0.55);
 
     final finSemaine = startOfWeek(today());
     final debut = finSemaine.subtract(Duration(days: 7 * (weeks - 1)));
@@ -179,16 +174,11 @@ class DailyXpChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     if (values.isEmpty) return const SizedBox.shrink();
 
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
-    final vide = CupertinoDynamicColor.resolve(
-      AppTheme.separator,
-      context,
-    ).withValues(alpha: 0.7);
+    final secondaire = c.secondary;
+    final vide = c.separator.withValues(alpha: 0.7);
 
     final maximum = values.fold<int>(0, (m, v) => v.xp > m ? v.xp : m);
 

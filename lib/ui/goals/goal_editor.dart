@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/util/day.dart';
 import '../../domain/models/goal.dart';
 import '../../state/providers.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/modal_page.dart';
 
@@ -98,7 +99,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
       context: context,
       builder: (contexte) => Container(
         height: 300,
-        color: CupertinoDynamicColor.resolve(AppTheme.card, contexte),
+        color: AppColors.of(contexte).card,
         child: SafeArea(
           top: false,
           child: Column(
@@ -192,12 +193,10 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return AppFormPage(
       title: widget.goal == null ? 'Nouvel objectif' : 'Modifier',
@@ -221,61 +220,10 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
         Gaps.h24,
         const FormLabel('Domaine'),
         Gaps.h8,
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final categorie in data.activeCategories)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => setState(() => _categorieId = categorie.id),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _categorieId == categorie.id
-                        ? categorie.color.withValues(alpha: 0.16)
-                        : CupertinoDynamicColor.resolve(
-                            AppTheme.field,
-                            context,
-                          ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: _categorieId == categorie.id
-                          ? categorie.color.withValues(alpha: 0.45)
-                          : CupertinoDynamicColor.resolve(
-                              AppTheme.separator,
-                              context,
-                            ),
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(categorie.emoji, style: AppText.emoji(14)),
-                      Gaps.w4,
-                      Text(
-                        categorie.name,
-                        style: TextStyle(
-                          fontFamily: 'CupertinoSystemText',
-                          fontSize: 14,
-                          letterSpacing: -0.2,
-                          fontWeight: _categorieId == categorie.id
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: _categorieId == categorie.id
-                              ? categorie.color
-                              : secondaire,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
+        CategoryPicker(
+          categories: data.activeCategories,
+          selectedId: _categorieId,
+          onSelected: (id) => setState(() => _categorieId = id),
         ),
 
         Gaps.h24,
@@ -349,12 +297,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
                   child: Icon(
                     CupertinoIcons.minus_circle,
                     size: 20,
-                    color: _etapes.length == 1
-                        ? CupertinoDynamicColor.resolve(
-                            AppTheme.tertiaryLabel,
-                            context,
-                          )
-                        : AppTheme.missed,
+                    color: _etapes.length == 1 ? c.tertiary : AppTheme.missed,
                     semanticLabel: 'Retirer cette étape',
                   ),
                 ),

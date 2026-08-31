@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import '../widgets/modal_page.dart';
@@ -146,11 +147,9 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final secondaire = c.secondary;
 
     return AppFormPage(
       title: widget.habit == null ? 'Nouvelle habitude' : 'Modifier',
@@ -174,19 +173,10 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
         Gaps.h24,
         const FormLabel('Domaine'),
         Gaps.h8,
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final categorie in data.activeCategories)
-              _CategoryPill(
-                emoji: categorie.emoji,
-                name: categorie.name,
-                color: categorie.color,
-                selected: _categorieId == categorie.id,
-                onTap: () => setState(() => _categorieId = categorie.id),
-              ),
-          ],
+        CategoryPicker(
+          categories: data.activeCategories,
+          selectedId: _categorieId,
+          onSelected: (id) => setState(() => _categorieId = id),
         ),
 
         Gaps.h24,
@@ -284,13 +274,7 @@ class _HabitEditorState extends ConsumerState<_HabitEditor> {
                 child: Text(
                   '$_foisParSemaine / sem.',
                   textAlign: TextAlign.end,
-                  style: AppText.readout(
-                    size: 15,
-                    color: CupertinoDynamicColor.resolve(
-                      AppTheme.label,
-                      context,
-                    ),
-                  ),
+                  style: AppText.readout(size: 15, color: c.label),
                 ),
               ),
             ],
@@ -337,67 +321,6 @@ class _Hint extends StatelessWidget {
   }
 }
 
-/// Capsule de sélection d'un domaine.
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({
-    required this.emoji,
-    required this.name,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String name;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final texte = selected
-        ? color
-        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.16)
-              : CupertinoDynamicColor.resolve(AppTheme.field, context),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected
-                ? color.withValues(alpha: 0.45)
-                : CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(emoji, style: AppText.emoji(14)),
-            Gaps.w4,
-            Text(
-              name,
-              style: TextStyle(
-                fontFamily: 'CupertinoSystemText',
-                fontSize: 14,
-                letterSpacing: -0.2,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: texte,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Sélecteur des jours de la semaine, en pastilles L M M J V S D.
 class _WeekdayPicker extends StatelessWidget {
   const _WeekdayPicker({required this.selected, required this.onChanged});
@@ -408,6 +331,7 @@ class _WeekdayPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const initiales = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    final c = AppColors.of(context);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,26 +350,13 @@ class _WeekdayPicker extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: selected.contains(jour)
-                    ? AppTheme.seed
-                    : CupertinoDynamicColor.resolve(AppTheme.field, context),
-                border: Border.all(
-                  color: CupertinoDynamicColor.resolve(
-                    AppTheme.separator,
-                    context,
-                  ),
-                  width: 0.5,
-                ),
+                color: selected.contains(jour) ? AppTheme.seed : c.field,
+                border: Border.all(color: c.separator, width: 0.5),
               ),
               child: Text(
                 initiales[jour - 1],
                 style: AppText.title(
-                  selected.contains(jour)
-                      ? CupertinoColors.white
-                      : CupertinoDynamicColor.resolve(
-                          AppTheme.secondaryLabel,
-                          context,
-                        ),
+                  selected.contains(jour) ? CupertinoColors.white : c.secondary,
                   size: 15,
                 ),
               ),

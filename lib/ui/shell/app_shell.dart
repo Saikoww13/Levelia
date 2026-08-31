@@ -78,6 +78,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final large = MediaQuery.sizeOf(context).width >= kWideBreakpoint;
 
     if (large) {
@@ -85,10 +86,7 @@ class _AppShellState extends State<AppShell> {
         child: Row(
           children: [
             _Sidebar(index: _index, onSelect: _select),
-            Container(
-              width: 1,
-              color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            ),
+            Container(width: 1, color: c.separator),
             // IndexedStack conserve l'état de chaque onglet (défilement,
             // filtres) quand on passe de l'un à l'autre.
             Expanded(
@@ -110,18 +108,10 @@ class _AppShellState extends State<AppShell> {
       tabBar: CupertinoTabBar(
         currentIndex: _index,
         onTap: _select,
-        backgroundColor: CupertinoDynamicColor.resolve(AppTheme.bar, context),
+        backgroundColor: c.bar,
         activeColor: AppTheme.seed,
-        inactiveColor: CupertinoDynamicColor.resolve(
-          AppTheme.secondaryLabel,
-          context,
-        ),
-        border: Border(
-          top: BorderSide(
-            color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            width: 0.5,
-          ),
-        ),
+        inactiveColor: c.secondary,
+        border: Border(top: BorderSide(color: c.separator, width: 0.5)),
         items: [
           for (final d in _destinations)
             BottomNavigationBarItem(
@@ -146,15 +136,13 @@ class _Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return Container(
       width: 232,
-      color: CupertinoDynamicColor.resolve(AppTheme.bar, context),
+      color: c.bar,
       child: SafeArea(
         right: false,
         child: Column(

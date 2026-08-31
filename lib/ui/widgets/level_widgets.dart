@@ -2,31 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/engine/leveling.dart';
-import '../../domain/models/category.dart';
 import 'common.dart';
-
-/// Pastille ronde d'une catégorie : son emoji sur son fond coloré.
-class CategoryAvatar extends StatelessWidget {
-  const CategoryAvatar({super.key, required this.category, this.size = 40});
-
-  final Category category;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: category.color.withValues(alpha: 0.16),
-        shape: BoxShape.circle,
-        border: Border.all(color: category.color.withValues(alpha: 0.35)),
-      ),
-      child: Text(category.emoji, style: AppText.emoji(size * 0.44)),
-    );
-  }
-}
 
 /// Barre de progression d'XP : niveau à gauche, reste à parcourir à droite.
 class XpBar extends StatelessWidget {
@@ -45,10 +21,8 @@ class XpBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
     final auMax = info.xpForNextLevel <= 0;
 
     return Column(
@@ -167,10 +141,8 @@ class LevelMedallion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return ProgressRing(
       progress: info.progress,
@@ -203,9 +175,8 @@ class StreakPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final couleur = active
-        ? AppTheme.streak
-        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
+    final c = AppColors.of(context);
+    final couleur = active ? AppTheme.streak : c.secondary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -252,12 +223,13 @@ class AppSegmented<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return SizedBox(
       width: double.infinity,
       child: CupertinoSlidingSegmentedControl<T>(
         groupValue: value,
-        backgroundColor: CupertinoDynamicColor.resolve(AppTheme.field, context),
-        thumbColor: CupertinoDynamicColor.resolve(AppTheme.card, context),
+        backgroundColor: c.field,
+        thumbColor: c.card,
         padding: const EdgeInsets.all(3),
         onValueChanged: (v) {
           if (v != null) onChanged(v);
@@ -277,11 +249,9 @@ class SegmentLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
 
     // Pas de rembourrage vertical : le contrôle segmenté d'iOS fixe lui-même
     // sa hauteur, et un libellé à deux lignes la dépasse sinon.

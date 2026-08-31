@@ -34,10 +34,8 @@ class AppPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return CupertinoPageScaffold(
       child: CustomScrollView(
@@ -46,19 +44,8 @@ class AppPage extends StatelessWidget {
             largeTitle: Text(title),
             middle: subtitle == null ? null : Text(title),
             trailing: trailing,
-            backgroundColor: CupertinoDynamicColor.resolve(
-              AppTheme.bar,
-              context,
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: CupertinoDynamicColor.resolve(
-                  AppTheme.separator,
-                  context,
-                ),
-                width: 0.5,
-              ),
-            ),
+            backgroundColor: c.bar,
+            border: Border(bottom: BorderSide(color: c.separator, width: 0.5)),
           ),
           if (subtitle != null)
             SliverToBoxAdapter(
@@ -112,10 +99,8 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
@@ -157,11 +142,9 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return Center(
       child: Padding(
@@ -169,14 +152,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 52,
-              color: CupertinoDynamicColor.resolve(
-                AppTheme.tertiaryLabel,
-                context,
-              ),
-            ),
+            Icon(icon, size: 52, color: c.tertiary),
             Gaps.h16,
             Text(
               title,
@@ -205,10 +181,8 @@ class FormLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return Padding(
       padding: const EdgeInsets.only(left: 4),
@@ -245,7 +219,8 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fond = CupertinoDynamicColor.resolve(AppTheme.card, context);
+    final c = AppColors.of(context);
+    final fond = c.card;
 
     final contenu = Container(
       padding: padding,
@@ -255,9 +230,7 @@ class AppCard extends StatelessWidget {
             : Color.alphaBlend(accent!.withValues(alpha: 0.06), fond),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
-          color: accent == null
-              ? CupertinoDynamicColor.resolve(AppTheme.separator, context)
-              : accent!.withValues(alpha: 0.22),
+          color: accent == null ? c.separator : accent!.withValues(alpha: 0.22),
           width: 0.5,
         ),
       ),
@@ -319,11 +292,9 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final teinte = color ?? AppTheme.seed;
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final secondaire = c.secondary;
 
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

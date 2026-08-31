@@ -45,17 +45,13 @@ class AppFormPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final clavier = MediaQuery.viewInsetsOf(context).bottom;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        backgroundColor: CupertinoDynamicColor.resolve(AppTheme.bar, context),
-        border: Border(
-          bottom: BorderSide(
-            color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            width: 0.5,
-          ),
-        ),
+        backgroundColor: c.bar,
+        border: Border(bottom: BorderSide(color: c.separator, width: 0.5)),
         leading: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => Navigator.of(context).pop(),
@@ -117,6 +113,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return CupertinoTextField(
       controller: controller,
       autofocus: autofocus,
@@ -125,16 +122,11 @@ class AppTextField extends StatelessWidget {
       placeholder: placeholder,
       style: style,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      placeholderStyle: TextStyle(
-        color: CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context),
-      ),
+      placeholderStyle: TextStyle(color: c.tertiary),
       decoration: BoxDecoration(
-        color: CupertinoDynamicColor.resolve(AppTheme.field, context),
+        color: c.field,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-          width: 0.5,
-        ),
+        border: Border.all(color: c.separator, width: 0.5),
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../../core/util/day.dart';
 import '../../domain/models/app_data.dart';
 import '../../state/providers.dart';
 import '../categories/category_editor.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import '../widgets/modal_page.dart';
@@ -17,14 +18,12 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
     final niveau = data.globalLevel;
 
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return AppPage(
       title: 'Profil',
@@ -304,10 +303,8 @@ class _ImportPageState extends State<_ImportPage> {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return AppFormPage(
       title: 'Importer',
@@ -352,11 +349,9 @@ class _SettingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
     final teinte = destructive ? AppTheme.missed : AppTheme.seed;
 
     return CupertinoButton(
@@ -380,14 +375,7 @@ class _SettingRow extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            CupertinoIcons.chevron_forward,
-            size: 15,
-            color: CupertinoDynamicColor.resolve(
-              AppTheme.tertiaryLabel,
-              context,
-            ),
-          ),
+          Icon(CupertinoIcons.chevron_forward, size: 15, color: c.tertiary),
         ],
       ),
     );
@@ -399,12 +387,10 @@ class _RowDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 48),
-      child: Container(
-        height: 0.5,
-        color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-      ),
+      child: Container(height: 0.5, color: c.separator),
     );
   }
 }

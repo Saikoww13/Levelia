@@ -144,9 +144,10 @@ class _XpBannerState extends State<_XpBanner>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final hautSur = MediaQuery.paddingOf(context).top;
-    final fond = CupertinoDynamicColor.resolve(AppTheme.card, context);
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final fond = c.card;
+    final label = c.label;
 
     return Positioned(
       top: hautSur + 8,

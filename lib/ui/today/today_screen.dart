@@ -6,6 +6,7 @@ import '../../core/util/day.dart';
 import '../../domain/models/category.dart';
 import '../../state/providers.dart';
 import '../habits/habit_editor.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import '../widgets/xp_feedback.dart';
@@ -17,6 +18,7 @@ class TodayScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
     final jour = ref.watch(selectedDayProvider);
     final entries = ref.watch(dayEntriesProvider);
@@ -24,10 +26,7 @@ class TodayScreen extends ConsumerWidget {
     final xpDuJour = ref.watch(dayXpProvider);
 
     final estAujourdhui = isSameDay(jour, today());
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final secondaire = c.secondary;
 
     return AppPage(
       title: estAujourdhui ? 'Aujourd\'hui' : 'Journée passée',
@@ -124,15 +123,13 @@ class _SessionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
     final niveau = data.globalLevel;
     final complete = done == total && total > 0;
 
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
     final arc = complete ? AppTheme.success : AppTheme.seed;
 
     return AppCard(
@@ -255,11 +252,12 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final couleurTexte = !enabled
-        ? CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context)
+        ? c.tertiary
         : selected
         ? CupertinoColors.white
-        : CupertinoDynamicColor.resolve(AppTheme.label, context);
+        : c.label;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -320,7 +318,7 @@ class _CategoryFilterBar extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
         children: [
-          _FilterPill(
+          CategoryPill(
             label: 'Tout',
             selected: filtre == null,
             color: AppTheme.seed,
@@ -328,7 +326,7 @@ class _CategoryFilterBar extends ConsumerWidget {
           ),
           Gaps.w8,
           for (final Category categorie in categories) ...[
-            _FilterPill(
+            CategoryPill(
               label: categorie.name,
               emoji: categorie.emoji,
               selected: filtre == categorie.id,
@@ -339,70 +337,6 @@ class _CategoryFilterBar extends ConsumerWidget {
             Gaps.w8,
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// Capsule de filtre, dans l'esprit des pastilles iOS.
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-    this.emoji,
-  });
-
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-  final String? emoji;
-
-  @override
-  Widget build(BuildContext context) {
-    final texte = selected
-        ? color
-        : CupertinoDynamicColor.resolve(AppTheme.secondaryLabel, context);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected
-              ? color.withValues(alpha: 0.16)
-              : CupertinoDynamicColor.resolve(AppTheme.card, context),
-          borderRadius: BorderRadius.circular(17),
-          border: Border.all(
-            color: selected
-                ? color.withValues(alpha: 0.45)
-                : CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (emoji != null) ...[
-              Text(emoji!, style: AppText.emoji(13)),
-              Gaps.w4,
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'CupertinoSystemText',
-                fontSize: 14,
-                letterSpacing: -0.2,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: texte,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

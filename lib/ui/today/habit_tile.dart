@@ -25,21 +25,16 @@ class HabitTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final habitude = entry.habit;
     final couleur = category?.color ?? AppTheme.seed;
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     final (icone, couleurEtat) = switch ((entry.isDone, entry.isMissed)) {
       (true, _) => (CupertinoIcons.checkmark_circle_fill, AppTheme.success),
       (_, true) => (CupertinoIcons.xmark_circle_fill, AppTheme.missed),
-      _ => (
-        CupertinoIcons.circle,
-        CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context),
-      ),
+      _ => (CupertinoIcons.circle, c.tertiary),
     };
 
     final xpText = entry.isDone

@@ -1,0 +1,38 @@
+name: Vérifications
+
+# Objectif : qu'aucune session, humaine ou assistée, ne pousse du code qui ne
+# compile pas, casse un test ou dérive du formatage. Plusieurs machines et
+# plusieurs sessions travaillent sur ce dépôt — c'est ici que leurs écarts se
+# rattrapent.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # `stable` suit ce qu'un `flutter upgrade` installe sur un poste de
+          # développement. En contrepartie, une nouvelle version de Flutter qui
+          # change les règles de formatage fera échouer l'étape `dart format` :
+          # c'est visible et se corrige en reformatant, pas un faux positif.
+          channel: stable
+          cache: true
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Analyse statique
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Formatage
+        run: dart format --output=none --set-exit-if-changed lib test

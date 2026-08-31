@@ -6,6 +6,7 @@ import '../../domain/engine/streaks.dart';
 import '../../domain/models/category.dart';
 import '../../domain/models/habit.dart';
 import '../../state/providers.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import 'habit_editor.dart';
@@ -67,7 +68,8 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
+    final c = AppColors.of(context);
+    final label = c.label;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
@@ -137,15 +139,13 @@ class _HabitRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
     final serie = Streaks.of(data, habit);
     final taux = (serie.completionRate * 100).round();
 
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return AppCard(
       accent: category.color,
@@ -226,10 +226,8 @@ class _ArchivedTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),

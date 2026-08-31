@@ -87,11 +87,7 @@ final dayProgressProvider = Provider<({int done, int total, double ratio})>((
   final entries = ref.watch(dayEntriesProvider);
   final faites = entries.where((e) => e.isDone).length;
   final total = entries.length;
-  return (
-    done: faites,
-    total: total,
-    ratio: total == 0 ? 0.0 : faites / total,
-  );
+  return (done: faites, total: total, ratio: total == 0 ? 0.0 : faites / total);
 });
 
 /// XP gagnée sur la journée sélectionnée.

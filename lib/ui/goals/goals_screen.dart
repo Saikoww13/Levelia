@@ -6,8 +6,8 @@ import '../../core/util/day.dart';
 import '../../domain/models/category.dart';
 import '../../domain/models/goal.dart';
 import '../../state/providers.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
-import '../widgets/level_widgets.dart';
 import '../widgets/xp_feedback.dart';
 import 'goal_editor.dart';
 
@@ -97,15 +97,13 @@ class _GoalCardState extends ConsumerState<_GoalCard> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final objectif = widget.goal;
     final couleur = widget.category?.color ?? AppTheme.seed;
     final controleur = ref.read(appControllerProvider.notifier);
 
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return AppCard(
       accent: couleur,
@@ -187,10 +185,7 @@ class _GoalCardState extends ConsumerState<_GoalCard> {
           ),
           if (_deplie) ...[
             Gaps.h12,
-            Container(
-              height: 0.5,
-              color: CupertinoDynamicColor.resolve(AppTheme.separator, context),
-            ),
+            Container(height: 0.5, color: c.separator),
             Gaps.h12,
             if (objectif.description.isNotEmpty) ...[
               Text(
@@ -226,9 +221,7 @@ class _GoalCardState extends ConsumerState<_GoalCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   minimumSize: const Size(0, 34),
                   borderRadius: BorderRadius.circular(17),
-                  color: objectif.isCompleted
-                      ? CupertinoDynamicColor.resolve(AppTheme.field, context)
-                      : AppTheme.success,
+                  color: objectif.isCompleted ? c.field : AppTheme.success,
                   onPressed: () async {
                     final evenement = await controleur.toggleGoalCompletion(
                       objectif.id,
@@ -276,11 +269,9 @@ class _MilestoneRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -334,10 +325,8 @@ class _DeadlineLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final c = AppColors.of(context);
+    final secondaire = c.secondary;
 
     if (goal.isCompleted) {
       return Text(

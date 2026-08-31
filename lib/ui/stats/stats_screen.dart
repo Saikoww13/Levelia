@@ -6,6 +6,7 @@ import '../../core/util/day.dart';
 import '../../domain/engine/streaks.dart';
 import '../../domain/models/app_data.dart';
 import '../../state/providers.dart';
+import '../widgets/category_widgets.dart';
 import '../widgets/common.dart';
 import '../widgets/level_widgets.dart';
 import 'charts.dart';
@@ -135,15 +136,13 @@ class StatsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final data = ref.watch(appDataProvider);
     final stats = ref.watch(statsProvider);
     final niveau = data.globalLevel;
 
-    final label = CupertinoDynamicColor.resolve(AppTheme.label, context);
-    final secondaire = CupertinoDynamicColor.resolve(
-      AppTheme.secondaryLabel,
-      context,
-    );
+    final label = c.label;
+    final secondaire = c.secondary;
 
     return AppPage(
       title: 'Progression',

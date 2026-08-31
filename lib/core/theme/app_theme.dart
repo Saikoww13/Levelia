@@ -145,6 +145,71 @@ class AppTheme {
   }
 }
 
+/// Les couleurs du thème, déjà résolues pour la luminosité ambiante.
+///
+/// Sans cela, chaque widget appelle `CupertinoDynamicColor.resolve` pour
+/// chaque teinte dont il a besoin : la même cérémonie de quatre lignes,
+/// répétée des dizaines de fois, qui noie l'intention dans le bruit. Ici, une
+/// seule ligne en tête de `build` donne accès à toute la palette.
+///
+/// ```dart
+/// final c = AppColors.of(context);
+/// Text('Bonjour', style: AppText.title(c.label));
+/// ```
+class AppColors {
+  const AppColors._({
+    required this.label,
+    required this.secondary,
+    required this.tertiary,
+    required this.card,
+    required this.field,
+    required this.separator,
+    required this.bar,
+    required this.ground,
+  });
+
+  /// Résout la palette pour le contexte donné.
+  factory AppColors.of(BuildContext context) {
+    Color resoudre(CupertinoDynamicColor couleur) =>
+        CupertinoDynamicColor.resolve(couleur, context);
+
+    return AppColors._(
+      label: resoudre(AppTheme.label),
+      secondary: resoudre(AppTheme.secondaryLabel),
+      tertiary: resoudre(AppTheme.tertiaryLabel),
+      card: resoudre(AppTheme.card),
+      field: resoudre(AppTheme.field),
+      separator: resoudre(AppTheme.separator),
+      bar: resoudre(AppTheme.bar),
+      ground: resoudre(AppTheme.ground),
+    );
+  }
+
+  /// Texte principal.
+  final Color label;
+
+  /// Texte secondaire : métadonnées, légendes, unités.
+  final Color secondary;
+
+  /// Texte très effacé : éléments désactivés.
+  final Color tertiary;
+
+  /// Surface des cartes.
+  final Color card;
+
+  /// Fond des champs de saisie.
+  final Color field;
+
+  /// Trait de séparation.
+  final Color separator;
+
+  /// Fond des barres de navigation.
+  final Color bar;
+
+  /// Fond de l'application.
+  final Color ground;
+}
+
 /// Styles de texte de l'application.
 ///
 /// Le texte courant utilise la police système (SF Pro) : c'est ce qui fait

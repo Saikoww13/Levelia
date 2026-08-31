@@ -88,6 +88,7 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final valide = _nom.text.trim().isNotEmpty;
 
     return AppFormPage(
@@ -143,17 +144,9 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
                     borderRadius: BorderRadius.circular(11),
                     color: _emoji == emoji
                         ? AppTheme.seed.withValues(alpha: 0.16)
-                        : CupertinoDynamicColor.resolve(
-                            AppTheme.field,
-                            context,
-                          ),
+                        : c.field,
                     border: Border.all(
-                      color: _emoji == emoji
-                          ? AppTheme.seed
-                          : CupertinoDynamicColor.resolve(
-                              AppTheme.separator,
-                              context,
-                            ),
+                      color: _emoji == emoji ? AppTheme.seed : c.separator,
                       width: _emoji == emoji ? 1.5 : 0.5,
                     ),
                   ),
@@ -182,10 +175,7 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: _couleur == valeur
-                          ? CupertinoDynamicColor.resolve(
-                              AppTheme.label,
-                              context,
-                            )
+                          ? c.label
                           : const Color(0x00000000),
                       width: 3,
                     ),
