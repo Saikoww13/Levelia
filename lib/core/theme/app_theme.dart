@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /*
   THÈSE : Levelia est un journal de performance, pas une liste de courses.
@@ -219,6 +218,11 @@ class AppColors {
 class AppText {
   const AppText._();
 
+  /// Famille empaquetée dans `assets/fonts`, déclarée sous ce nom dans
+  /// `pubspec.yaml`. Les graisses disponibles sont 500, 600 et 700 : demander
+  /// une graisse absente ferait synthétiser un faux gras par le moteur.
+  static const String _condensed = 'BarlowCondensed';
+
   /// Chiffre de relevé : XP, niveau, compteur. Chasse fixe pour que les
   /// nombres ne dansent pas quand ils changent.
   static TextStyle readout({
@@ -227,7 +231,8 @@ class AppText {
     FontWeight weight = FontWeight.w700,
     double letterSpacing = 0,
   }) {
-    return GoogleFonts.barlowCondensed(
+    return TextStyle(
+      fontFamily: _condensed,
       fontSize: size,
       fontWeight: weight,
       color: color,
@@ -239,7 +244,8 @@ class AppText {
 
   /// Étiquette d'unité ou de colonne, en petites capitales espacées.
   static TextStyle unit(Color color, {double size = 10}) {
-    return GoogleFonts.barlowCondensed(
+    return TextStyle(
+      fontFamily: _condensed,
       fontSize: size,
       fontWeight: FontWeight.w600,
       color: color,
