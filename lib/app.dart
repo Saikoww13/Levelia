@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'domain/models/app_data.dart';
 import 'state/providers.dart';
+import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/shell/app_shell.dart';
 
 /// Racine de l'application.
@@ -29,7 +30,10 @@ class LeveliaApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme(luminosite),
       home: etat.when(
-        data: (_) => const AppShell(),
+        // Au tout premier lancement — et après « Revoir l'introduction » —
+        // l'application s'ouvre sur l'introduction plutôt que sur les onglets.
+        data: (data) =>
+            data.needsOnboarding ? const OnboardingScreen() : const AppShell(),
         loading: () => const _BootScreen(),
         error: (erreur, _) => _ErrorScreen(message: '$erreur'),
       ),

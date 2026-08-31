@@ -453,6 +453,60 @@ class AppController extends AsyncNotifier<AppData> {
     await _mutate((data) => data.copyWith(profileName: propre));
   }
 
+  /// Applique les choix faits pendant l'introduction, en une seule écriture.
+  ///
+  /// Créer les domaines un par un puis l'habitude aurait provoqué autant
+  /// d'enregistrements sur disque, et laissé un état incomplet si l'un d'eux
+  /// avait échoué. Ici, tout arrive ensemble ou rien n'arrive.
+  Future<void> applyOnboarding({
+    required List<SuggestedCategory> categories,
+    String? habitTitle,
+  }) async {
+    if (categories.isEmpty) return completeOnboarding();
+
+    final nouvelles = [
+      for (var i = 0; i < categories.length; i++)
+        Category(
+          id: _uuid.v4(),
+          name: categories[i].name,
+          emoji: categories[i].emoji,
+          colorValue: categories[i].colorValue,
+          sortIndex: i,
+        ),
+    ];
+
+    final titre = habitTitle?.trim() ?? '';
+    final habitudes = titre.isEmpty
+        ? const <Habit>[]
+        : [
+            Habit(
+              id: _uuid.v4(),
+              title: titre,
+              // La première habitude rejoint le premier domaine choisi.
+              categoryId: nouvelles.first.id,
+              createdAt: today(),
+            ),
+          ];
+
+    await _mutate(
+      (data) => data.copyWith(
+        categories: [...data.categories, ...nouvelles],
+        habits: [...data.habits, ...habitudes],
+        onboardingSeenAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Referme l'introduction : elle ne se rouvrira plus au démarrage.
+  Future<void> completeOnboarding() async {
+    await _mutate((data) => data.copyWith(onboardingSeenAt: DateTime.now()));
+  }
+
+  /// Rejoue l'introduction au prochain affichage.
+  Future<void> replayOnboarding() async {
+    await _mutate((data) => data.copyWith(clearOnboardingSeenAt: true));
+  }
+
   Future<void> setThemeMode(AppearanceMode mode) async {
     await _mutate((data) => data.copyWith(themeMode: mode));
   }

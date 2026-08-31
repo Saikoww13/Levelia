@@ -37,6 +37,7 @@ class AppData {
     this.schemaVersion = currentSchemaVersion,
     this.profileName = 'Aventurier',
     this.themeMode = AppearanceMode.system,
+    this.onboardingSeenAt,
     this.categories = const [],
     this.habits = const [],
     this.logs = const {},
@@ -53,6 +54,16 @@ class AppData {
 
   /// Préférence d'apparence, conservée avec les données.
   final AppearanceMode themeMode;
+
+  /// Date à laquelle l'introduction a été parcourue, ou `null` si elle ne l'a
+  /// jamais été.
+  ///
+  /// C'est ce champ qui décide si l'application s'ouvre sur l'introduction. Le
+  /// remettre à `null` la rejoue — c'est ce que fait « Revoir l'introduction ».
+  final DateTime? onboardingSeenAt;
+
+  /// Vrai tant que l'introduction n'a pas été parcourue.
+  bool get needsOnboarding => onboardingSeenAt == null;
 
   final List<Category> categories;
   final List<Habit> habits;
@@ -117,6 +128,8 @@ class AppData {
   AppData copyWith({
     String? profileName,
     AppearanceMode? themeMode,
+    DateTime? onboardingSeenAt,
+    bool clearOnboardingSeenAt = false,
     List<Category>? categories,
     List<Habit>? habits,
     Map<String, HabitLog>? logs,
@@ -127,6 +140,9 @@ class AppData {
       schemaVersion: schemaVersion,
       profileName: profileName ?? this.profileName,
       themeMode: themeMode ?? this.themeMode,
+      onboardingSeenAt: clearOnboardingSeenAt
+          ? null
+          : (onboardingSeenAt ?? this.onboardingSeenAt),
       categories: categories ?? this.categories,
       habits: habits ?? this.habits,
       logs: logs ?? this.logs,
@@ -139,6 +155,7 @@ class AppData {
     'schemaVersion': schemaVersion,
     'profileName': profileName,
     'themeMode': themeMode.name,
+    'onboardingSeenAt': onboardingSeenAt?.toIso8601String(),
     'categories': categories.map((c) => c.toJson()).toList(),
     'habits': habits.map((h) => h.toJson()).toList(),
     'logs': logs.values.map((l) => l.toJson()).toList(),
@@ -157,6 +174,9 @@ class AppData {
       schemaVersion: json['schemaVersion'] as int? ?? currentSchemaVersion,
       profileName: json['profileName'] as String? ?? 'Aventurier',
       themeMode: AppearanceMode.fromKey(json['themeMode'] as String?),
+      onboardingSeenAt: DateTime.tryParse(
+        json['onboardingSeenAt'] as String? ?? '',
+      ),
       categories: ((json['categories'] as List?) ?? const [])
           .map((e) => Category.fromJson((e as Map).cast<String, dynamic>()))
           .toList(),

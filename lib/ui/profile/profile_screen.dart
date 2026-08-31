@@ -166,6 +166,13 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const _RowDivider(),
               _SettingRow(
+                icon: CupertinoIcons.book,
+                title: 'Revoir l\'introduction',
+                subtitle: 'Réaffiche les explications au prochain démarrage',
+                onTap: () => _revoirIntro(context, ref),
+              ),
+              const _RowDivider(),
+              _SettingRow(
                 icon: CupertinoIcons.arrow_counterclockwise,
                 title: 'Tout réinitialiser',
                 subtitle: 'Repart des domaines d\'origine',
@@ -261,6 +268,12 @@ class ProfileScreen extends ConsumerWidget {
         message: 'Ce texte n\'est pas une sauvegarde Levelia.',
       );
     }
+  }
+
+  Future<void> _revoirIntro(BuildContext context, WidgetRef ref) async {
+    // Rien n'est effacé : seule la marque « déjà vue » est retirée, et
+    // l'application rouvre sur l'introduction.
+    await ref.read(appControllerProvider.notifier).replayOnboarding();
   }
 
   Future<void> _reinitialiser(BuildContext context, WidgetRef ref) async {
