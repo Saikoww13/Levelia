@@ -23,7 +23,7 @@ class CategoryAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: category.color.withValues(alpha: 0.35)),
       ),
-      child: Text(category.emoji, style: TextStyle(fontSize: size * 0.44)),
+      child: Text(category.emoji, style: AppText.emoji(size * 0.44)),
     );
   }
 }

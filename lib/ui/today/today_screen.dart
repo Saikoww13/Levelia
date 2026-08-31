@@ -388,7 +388,7 @@ class _FilterPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (emoji != null) ...[
-              Text(emoji!, style: const TextStyle(fontSize: 13)),
+              Text(emoji!, style: AppText.emoji(13)),
               Gaps.w4,
             ],
             Text(

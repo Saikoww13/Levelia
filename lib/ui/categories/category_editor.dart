@@ -110,7 +110,7 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
                   color: Color(_couleur).withValues(alpha: 0.5),
                 ),
               ),
-              child: Text(_emoji, style: const TextStyle(fontSize: 26)),
+              child: Text(_emoji, style: AppText.emoji(26)),
             ),
             Gaps.w16,
             Expanded(
@@ -157,7 +157,7 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
                       width: _emoji == emoji ? 1.5 : 0.5,
                     ),
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                  child: Text(emoji, style: AppText.emoji(20)),
                 ),
               ),
           ],

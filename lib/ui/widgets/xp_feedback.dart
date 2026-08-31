@@ -188,7 +188,7 @@ class _XpBannerState extends State<_XpBanner>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(widget.emoji, style: const TextStyle(fontSize: 17)),
+                Text(widget.emoji, style: AppText.emoji(17)),
                 Gaps.w12,
                 Flexible(
                   child: Text(

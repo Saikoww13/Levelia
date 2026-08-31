@@ -255,10 +255,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        categorie.emoji,
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      Text(categorie.emoji, style: AppText.emoji(14)),
                       Gaps.w4,
                       Text(
                         categorie.name,

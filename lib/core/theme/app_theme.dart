@@ -183,6 +183,21 @@ class AppText {
     );
   }
 
+  /// Style d'un texte purement emoji.
+  ///
+  /// Nomme explicitement la police emoji de chaque plateforme en repli. Sans
+  /// cela, le texte hérite de la police du thème, qui ne contient aucun
+  /// glyphe emoji : si la chaîne de repli du système ne prend pas le relais,
+  /// on obtient des carrés. Nommer les polices retire cette incertitude.
+  static TextStyle emoji(double size) => TextStyle(
+    fontSize: size,
+    fontFamilyFallback: const [
+      'Apple Color Emoji',
+      'Noto Color Emoji',
+      'Segoe UI Emoji',
+    ],
+  );
+
   /// Titre de contenu (nom d'habitude, d'objectif, de domaine).
   static TextStyle title(Color color, {double size = 16}) => TextStyle(
     fontFamily: 'CupertinoSystemText',

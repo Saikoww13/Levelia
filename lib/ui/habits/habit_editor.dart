@@ -379,7 +379,7 @@ class _CategoryPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
+            Text(emoji, style: AppText.emoji(14)),
             Gaps.w4,
             Text(
               name,

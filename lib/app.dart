@@ -43,14 +43,14 @@ class _BootScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const CupertinoPageScaffold(
+    return CupertinoPageScaffold(
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('⚔️', style: TextStyle(fontSize: 44)),
-            SizedBox(height: 24),
-            CupertinoActivityIndicator(radius: 12),
+            Text('⚔️', style: AppText.emoji(44)),
+            const SizedBox(height: 24),
+            const CupertinoActivityIndicator(radius: 12),
           ],
         ),
       ),

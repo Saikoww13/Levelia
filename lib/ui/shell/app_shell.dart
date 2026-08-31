@@ -164,7 +164,7 @@ class _Sidebar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
               child: Row(
                 children: [
-                  const Text('⚔️', style: TextStyle(fontSize: 22)),
+                  Text('⚔️', style: AppText.emoji(22)),
                   Gaps.w8,
                   Text('Levelia', style: AppText.title(label, size: 19)),
                 ],
