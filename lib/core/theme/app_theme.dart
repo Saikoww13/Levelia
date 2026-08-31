@@ -114,27 +114,27 @@ class AppTheme {
       textTheme: CupertinoTextThemeData(
         primaryColor: seed,
         textStyle: TextStyle(
-          fontFamily: '.SF Pro Text',
+          fontFamily: 'CupertinoSystemText',
           fontSize: 16,
           letterSpacing: -0.2,
           color: label,
         ),
         navTitleTextStyle: TextStyle(
-          fontFamily: '.SF Pro Display',
+          fontFamily: 'CupertinoSystemDisplay',
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.4,
           color: label,
         ),
         navLargeTitleTextStyle: TextStyle(
-          fontFamily: '.SF Pro Display',
+          fontFamily: 'CupertinoSystemDisplay',
           fontSize: 34,
           fontWeight: FontWeight.w700,
           letterSpacing: -0.9,
           color: label,
         ),
         tabLabelTextStyle: TextStyle(
-          fontFamily: '.SF Pro Text',
+          fontFamily: 'CupertinoSystemText',
           fontSize: 10,
           fontWeight: FontWeight.w500,
           letterSpacing: -0.1,
@@ -185,7 +185,7 @@ class AppText {
 
   /// Titre de contenu (nom d'habitude, d'objectif, de domaine).
   static TextStyle title(Color color, {double size = 16}) => TextStyle(
-    fontFamily: '.SF Pro Text',
+    fontFamily: 'CupertinoSystemText',
     fontSize: size,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.3,
@@ -194,7 +194,7 @@ class AppText {
 
   /// Texte courant.
   static TextStyle body(Color color, {double size = 15}) => TextStyle(
-    fontFamily: '.SF Pro Text',
+    fontFamily: 'CupertinoSystemText',
     fontSize: size,
     letterSpacing: -0.2,
     color: color,
@@ -202,7 +202,7 @@ class AppText {
 
   /// Métadonnée discrète sous un titre.
   static TextStyle caption(Color color, {double size = 13}) => TextStyle(
-    fontFamily: '.SF Pro Text',
+    fontFamily: 'CupertinoSystemText',
     fontSize: size,
     letterSpacing: -0.1,
     color: color,
@@ -210,7 +210,7 @@ class AppText {
 
   /// En-tête de groupe d'une liste encartée : petites capitales grises.
   static TextStyle groupHeader(Color color) => TextStyle(
-    fontFamily: '.SF Pro Text',
+    fontFamily: 'CupertinoSystemText',
     fontSize: 13,
     fontWeight: FontWeight.w400,
     letterSpacing: -0.1,

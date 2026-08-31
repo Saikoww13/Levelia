@@ -263,7 +263,7 @@ class _GoalEditorState extends ConsumerState<_GoalEditor> {
                       Text(
                         categorie.name,
                         style: TextStyle(
-                          fontFamily: '.SF Pro Text',
+                          fontFamily: 'CupertinoSystemText',
                           fontSize: 14,
                           letterSpacing: -0.2,
                           fontWeight: _categorieId == categorie.id

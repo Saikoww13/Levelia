@@ -125,7 +125,7 @@ class SectionTitle extends StatelessWidget {
             child: Text(
               title.toUpperCase(),
               style: TextStyle(
-                fontFamily: '.SF Pro Text',
+                fontFamily: 'CupertinoSystemText',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -215,7 +215,7 @@ class FormLabel extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          fontFamily: '.SF Pro Text',
+          fontFamily: 'CupertinoSystemText',
           fontSize: 13,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.4,

@@ -384,7 +384,7 @@ class _CategoryPill extends StatelessWidget {
             Text(
               name,
               style: TextStyle(
-                fontFamily: '.SF Pro Text',
+                fontFamily: 'CupertinoSystemText',
                 fontSize: 14,
                 letterSpacing: -0.2,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,

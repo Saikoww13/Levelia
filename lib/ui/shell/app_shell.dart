@@ -231,7 +231,7 @@ class _SidebarItem extends StatelessWidget {
                   destination.label,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: '.SF Pro Text',
+                    fontFamily: 'CupertinoSystemText',
                     fontSize: 15,
                     letterSpacing: -0.2,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
