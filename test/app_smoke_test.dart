@@ -28,7 +28,9 @@ AppData _installe() => AppData(
       title: 'Lire 10 pages',
       categoryId: 'c1',
       difficulty: HabitDifficulty.easy,
-      createdAt: today(),
+      // Créée il y a un mois : elle apparaît donc aussi sur les semaines
+      // passées, ce qui permet de les tester.
+      createdAt: today().subtract(const Duration(days: 30)),
     ),
   ],
 );
@@ -169,6 +171,89 @@ void main() {
       final data = _container(tester).read(appDataProvider);
       expect(data.categories, hasLength(1));
       expect(data.activeHabits, hasLength(1));
+    });
+  });
+
+  group('Navigation entre les semaines', () {
+    testWidgets('le chevron gauche recule d\'une semaine', (tester) async {
+      await _pumpApp(tester);
+      expect(find.text(longDayLabel(today())), findsOneWidget);
+
+      await tester.tap(find.byIcon(CupertinoIcons.chevron_left));
+      await tester.pumpAndSettle();
+
+      final semaineDerniere = today().subtract(const Duration(days: 7));
+      expect(find.text(longDayLabel(semaineDerniere)), findsOneWidget);
+      expect(find.text('Journée passée'), findsWidgets);
+    });
+
+    testWidgets('on peut remonter loin dans le passé', (tester) async {
+      await _pumpApp(tester);
+
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byIcon(CupertinoIcons.chevron_left));
+        await tester.pumpAndSettle();
+      }
+
+      final troisSemaines = today().subtract(const Duration(days: 21));
+      expect(
+        find.text(longDayLabel(troisSemaines)),
+        findsOneWidget,
+        reason: 'un jour d\'il y a trois semaines doit être atteignable',
+      );
+    });
+
+    testWidgets('le chevron droit est inactif sur la semaine en cours', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      final droite = tester.widget<CupertinoButton>(
+        find.ancestor(
+          of: find.byIcon(CupertinoIcons.chevron_right),
+          matching: find.byType(CupertinoButton),
+        ),
+      );
+      expect(
+        droite.onPressed,
+        isNull,
+        reason: 'il n\'y a rien à pointer dans le futur',
+      );
+    });
+
+    testWidgets('revenir en avant ne dépasse jamais aujourd\'hui', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+
+      await tester.tap(find.byIcon(CupertinoIcons.chevron_left));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(CupertinoIcons.chevron_right));
+      await tester.pumpAndSettle();
+
+      expect(find.text(longDayLabel(today())), findsOneWidget);
+    });
+
+    testWidgets('pointer un jour d\'une semaine passée crédite l\'XP', (
+      tester,
+    ) async {
+      await _pumpApp(tester);
+      final container = _container(tester);
+
+      await tester.tap(find.byIcon(CupertinoIcons.chevron_left));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lire 10 pages'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(container.read(appDataProvider).totalXp, 10);
+      final jourPasse = today().subtract(const Duration(days: 7));
+      expect(
+        container.read(appDataProvider).logFor('h1', jourPasse)?.done,
+        isTrue,
+        reason: 'le pointage doit bien porter sur la journée affichée',
+      );
+      await tester.pumpAndSettle();
     });
   });
 

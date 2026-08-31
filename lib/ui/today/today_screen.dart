@@ -207,30 +207,119 @@ class _SessionCard extends ConsumerWidget {
   }
 }
 
-/// Sélecteur de journée sur la semaine en cours.
+/// Sélecteur de journée, avec navigation d'une semaine à l'autre.
+///
+/// Sans elle, un jour oublié il y a plus de sept jours devenait
+/// définitivement inatteignable, alors que le modèle sait parfaitement
+/// enregistrer un pointage à n'importe quelle date passée.
+///
+/// Changer de semaine déplace la journée sélectionnée du même nombre de jours
+/// plutôt que de dissocier « semaine affichée » et « jour choisi » : une seule
+/// source de vérité, et l'écran montre aussitôt les données de la semaine
+/// atteinte.
 class _WeekStrip extends ConsumerWidget {
   const _WeekStrip();
 
+  /// Décale la sélection de [semaines], sans jamais dépasser aujourd'hui.
+  void _decaler(WidgetRef ref, int semaines) {
+    final courant = ref.read(selectedDayProvider);
+    final vise = courant.add(Duration(days: 7 * semaines));
+    final aujourdhui = today();
+    ref.read(selectedDayProvider.notifier).state = vise.isAfter(aujourdhui)
+        ? aujourdhui
+        : vise;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final selectionne = ref.watch(selectedDayProvider);
     final jours = weekDays(selectionne);
     final aujourdhui = today();
 
-    return Row(
-      children: [
-        for (final jour in jours)
-          Expanded(
-            child: _DayCell(
-              day: jour,
-              selected: isSameDay(jour, selectionne),
-              isToday: isSameDay(jour, aujourdhui),
-              // On ne pointe pas le futur : seul le passé se rattrape.
-              enabled: !jour.isAfter(aujourdhui),
-              onTap: () => ref.read(selectedDayProvider.notifier).state = jour,
-            ),
+    // On ne va pas au-delà de la semaine en cours : il n'y a rien à y pointer.
+    final semaineCourante = isSameDay(
+      startOfWeek(selectionne),
+      startOfWeek(aujourdhui),
+    );
+
+    return GestureDetector(
+      // Le balayage horizontal fait la même chose que les chevrons : c'est le
+      // geste attendu sur iPhone, les chevrons restent pour la découvrabilité.
+      onHorizontalDragEnd: (details) {
+        final vitesse = details.primaryVelocity ?? 0;
+        if (vitesse > 240) {
+          _decaler(ref, -1);
+        } else if (vitesse < -240 && !semaineCourante) {
+          _decaler(ref, 1);
+        }
+      },
+      child: Row(
+        children: [
+          _WeekArrow(
+            icon: CupertinoIcons.chevron_left,
+            semantic: 'Semaine précédente',
+            color: c.secondary,
+            onTap: () => _decaler(ref, -1),
           ),
-      ],
+          for (final jour in jours)
+            Expanded(
+              child: _DayCell(
+                day: jour,
+                selected: isSameDay(jour, selectionne),
+                isToday: isSameDay(jour, aujourdhui),
+                // On ne pointe pas le futur : seul le passé se rattrape.
+                enabled: !jour.isAfter(aujourdhui),
+                onTap: () =>
+                    ref.read(selectedDayProvider.notifier).state = jour,
+              ),
+            ),
+          _WeekArrow(
+            icon: CupertinoIcons.chevron_right,
+            semantic: 'Semaine suivante',
+            color: c.secondary,
+            // Désactivé sur la semaine en cours plutôt que masqué : la barre
+            // garde la même largeur, les jours ne se décalent pas sous le doigt.
+            onTap: semaineCourante ? null : () => _decaler(ref, 1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chevron de changement de semaine.
+class _WeekArrow extends StatelessWidget {
+  const _WeekArrow({
+    required this.icon,
+    required this.semantic,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String semantic;
+  final Color color;
+
+  /// `null` désactive le chevron.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final actif = onTap != null;
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(28, 44),
+      onPressed: onTap,
+      child: Icon(
+        icon,
+        size: 16,
+        color: actif
+            ? color
+            : CupertinoDynamicColor.resolve(AppTheme.tertiaryLabel, context),
+        semanticLabel: semantic,
+      ),
     );
   }
 }
