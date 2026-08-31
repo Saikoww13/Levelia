@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/models/app_data.dart';
 import '../../state/app_controller.dart';
+import 'level_up.dart';
 
 /// Bannière d'XP actuellement affichée, s'il y en a une.
 ///
@@ -19,20 +20,22 @@ void showXpFeedback(BuildContext context, AppData data, XpEvent? event) {
   if (event == null || event.xpDelta == 0) return;
   if (!context.mounted) return;
 
+  // Un passage de palier mérite mieux qu'une bannière qui file en une seconde
+  // et demie : on s'arrête dessus, et c'est là que la récompense se dévoile.
+  if (event.anyLevelUp) {
+    _banniereCourante?.remove();
+    _banniereCourante = null;
+    showLevelUpCelebration(context, data, event);
+    return;
+  }
+
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
   if (overlay == null) return;
 
   final categorie = data.categoryById(event.categoryId);
-  final couleur = categorie?.color ?? AppTheme.success;
   final gain = event.xpDelta > 0;
 
-  final (emoji, texte, teinte) = event.leveledUp
-      ? (
-          '🎉',
-          '${categorie?.name ?? 'Domaine'} passe niveau ${event.newLevel}',
-          couleur,
-        )
-      : gain
+  final (emoji, texte, teinte) = gain
       ? (
           '✨',
           '+${event.xpDelta} XP · ${categorie?.name ?? ''}',
@@ -48,8 +51,7 @@ void showXpFeedback(BuildContext context, AppData data, XpEvent? event) {
       emoji: emoji,
       text: texte,
       tint: teinte,
-      emphatic: event.leveledUp,
-      lifetime: Duration(milliseconds: event.leveledUp ? 2400 : 1500),
+      lifetime: const Duration(milliseconds: 1500),
       onFinished: () {
         if (_banniereCourante == entree) {
           entree.remove();
@@ -73,7 +75,6 @@ class _XpBanner extends StatefulWidget {
     required this.emoji,
     required this.text,
     required this.tint,
-    required this.emphatic,
     required this.lifetime,
     required this.onFinished,
   });
@@ -83,7 +84,6 @@ class _XpBanner extends StatefulWidget {
   final Color tint;
 
   /// Passage de niveau : bannière teintée et plus affirmée.
-  final bool emphatic;
 
   /// Durée totale, entrée et sortie comprises.
   final Duration lifetime;
@@ -170,9 +170,7 @@ class _XpBannerState extends State<_XpBanner>
             constraints: const BoxConstraints(maxWidth: 420),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: widget.emphatic
-                  ? Color.alphaBlend(widget.tint.withValues(alpha: 0.22), fond)
-                  : fond,
+              color: fond,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: widget.tint.withValues(alpha: 0.4),
@@ -195,10 +193,7 @@ class _XpBannerState extends State<_XpBanner>
                   child: Text(
                     widget.text,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.title(
-                      widget.emphatic ? widget.tint : label,
-                      size: 15,
-                    ),
+                    style: AppText.title(label, size: 15),
                   ),
                 ),
               ],

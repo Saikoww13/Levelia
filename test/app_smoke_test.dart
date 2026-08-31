@@ -95,7 +95,7 @@ void main() {
       expect(find.byType(CupertinoTabBar), findsOneWidget);
     });
 
-    testWidgets('les cinq onglets sont expliqués, un écran chacun', (
+    testWidgets('les six onglets sont expliqués, un écran chacun', (
       tester,
     ) async {
       await _pumpApp(tester, depart: const AppData());
@@ -105,6 +105,7 @@ void main() {
         'Habitudes',
         'Objectifs',
         'Progression',
+        'Arbre',
         'Profil',
       ]) {
         await tester.tap(find.text('Continuer'));
@@ -126,8 +127,8 @@ void main() {
         size: const Size(500, 1700),
       );
 
-      // Six appuis mènent du salut jusqu'à l'écran de création.
-      for (var i = 0; i < 6; i++) {
+      // Sept appuis mènent du salut jusqu'à l'écran de création.
+      for (var i = 0; i < 7; i++) {
         await tester.tap(find.text('Continuer'));
         await tester.pumpAndSettle();
       }
@@ -294,15 +295,14 @@ void main() {
       expect(find.textContaining('+10 XP'), findsNothing);
     });
 
-    testWidgets('la navigation atteint chacun des cinq onglets', (
-      tester,
-    ) async {
+    testWidgets('la navigation atteint chacun des six onglets', (tester) async {
       await _pumpApp(tester);
 
       for (final onglet in [
         'Habitudes',
         'Objectifs',
         'Progression',
+        'Arbre',
         'Profil',
       ]) {
         await tester.tap(find.text(onglet).last);

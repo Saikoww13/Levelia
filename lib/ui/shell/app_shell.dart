@@ -6,6 +6,7 @@ import '../habits/habits_screen.dart';
 import '../profile/profile_screen.dart';
 import '../stats/stats_screen.dart';
 import '../today/today_screen.dart';
+import '../tree/tree_screen.dart';
 
 /// Largeur à partir de laquelle on passe de la barre d'onglets (iPhone) à une
 /// barre latérale (iPad en paysage, Mac).
@@ -47,6 +48,12 @@ const List<_Destination> _destinations = [
     _buildStats,
   ),
   _Destination(
+    'Arbre',
+    CupertinoIcons.sparkles,
+    CupertinoIcons.sparkles,
+    _buildTree,
+  ),
+  _Destination(
     'Profil',
     CupertinoIcons.person,
     CupertinoIcons.person_fill,
@@ -58,6 +65,7 @@ Widget _buildToday(BuildContext _) => const TodayScreen();
 Widget _buildHabits(BuildContext _) => const HabitsScreen();
 Widget _buildGoals(BuildContext _) => const GoalsScreen();
 Widget _buildStats(BuildContext _) => const StatsScreen();
+Widget _buildTree(BuildContext _) => const TreeScreen();
 Widget _buildProfile(BuildContext _) => const ProfileScreen();
 
 /// Coque de navigation, adaptative selon la largeur disponible.

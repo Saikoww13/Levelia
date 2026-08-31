@@ -13,7 +13,16 @@ import '../domain/models/category.dart';
 import '../domain/models/goal.dart';
 import '../domain/models/habit.dart';
 import '../domain/models/habit_log.dart';
+import '../domain/models/reward.dart';
 import 'providers.dart';
+
+/// Niveaux d'une branche de catégorie et du tronc, relevés au même instant.
+class _Niveaux {
+  const _Niveaux(this.categorie, this.global);
+
+  final int categorie;
+  final int global;
+}
 
 /// Ce qu'un pointage a produit, pour pouvoir le retourner à l'interface.
 class XpEvent {
@@ -23,6 +32,10 @@ class XpEvent {
     required this.leveledUp,
     required this.newLevel,
     this.label = '',
+    this.previousLevel = 0,
+    this.globalLevel = 0,
+    this.previousGlobalLevel = 0,
+    this.unlocked = const [],
   });
 
   /// XP gagnée (positive) ou reprise (négative).
@@ -33,6 +46,26 @@ class XpEvent {
   final bool leveledUp;
   final int newLevel;
   final String label;
+
+  /// Niveau de la catégorie avant l'opération.
+  ///
+  /// Un pointage généreux peut faire franchir plusieurs paliers d'un coup :
+  /// c'est l'écart entre les deux bornes, et non le seul niveau final, qui dit
+  /// quelles récompenses viennent de tomber.
+  final int previousLevel;
+
+  /// Niveau global après et avant l'opération.
+  final int globalLevel;
+  final int previousGlobalLevel;
+
+  /// Récompenses débloquées par cette opération, dans l'ordre des paliers.
+  final List<Reward> unlocked;
+
+  /// Vrai si le tronc a franchi un palier.
+  bool get globalLeveledUp => globalLevel > previousGlobalLevel;
+
+  /// Vrai si l'une ou l'autre branche a progressé d'un palier.
+  bool get anyLevelUp => leveledUp || globalLeveledUp;
 }
 
 /// Le cerveau de l'application : détient l'état, applique les règles d'XP,
@@ -98,7 +131,7 @@ class AppController extends AsyncNotifier<AppData> {
     final serieAvant = Streaks.streakBefore(_data, habit, jour);
     final gain = XpRules.awardFor(habit, streakBefore: serieAvant);
 
-    final avant = _levelOfCategory(habit.categoryId);
+    final avant = _releve(habit.categoryId);
 
     await _mutate((data) {
       final log = HabitLog(
@@ -111,12 +144,10 @@ class AppController extends AsyncNotifier<AppData> {
       return _withLog(_addXp(data, habit.categoryId, gain), log);
     });
 
-    final apres = _levelOfCategory(habit.categoryId);
-    return XpEvent(
+    return _evenement(
       xpDelta: gain,
       categoryId: habit.categoryId,
-      leveledUp: apres > avant,
-      newLevel: apres,
+      avant: avant,
       label: habit.title,
     );
   }
@@ -129,6 +160,7 @@ class AppController extends AsyncNotifier<AppData> {
     final repris = existant.xpAwarded;
     final penalite = XpRules.penaltyFor(habit);
     final delta = -repris - penalite;
+    final avant = _releve(habit.categoryId);
 
     // Pénalité réellement prélevée après bornage à 0 : si le delta total dépasse
     // l'XP disponible, le clamp absorbe une partie de la pénalité nominale.
@@ -147,11 +179,10 @@ class AppController extends AsyncNotifier<AppData> {
       return _withLog(_addXp(data, habit.categoryId, delta), log);
     });
 
-    return XpEvent(
+    return _evenement(
       xpDelta: delta,
       categoryId: habit.categoryId,
-      leveledUp: false,
-      newLevel: _levelOfCategory(habit.categoryId),
+      avant: avant,
       label: habit.title,
     );
   }
@@ -163,6 +194,7 @@ class AppController extends AsyncNotifier<AppData> {
     HabitLog existant,
   ) async {
     final restitue = existant.xpPenaltyApplied;
+    final avant = _releve(habit.categoryId);
 
     await _mutate((data) {
       final logs = Map<String, HabitLog>.from(data.logs)
@@ -171,11 +203,10 @@ class AppController extends AsyncNotifier<AppData> {
     });
 
     if (restitue == 0) return null;
-    return XpEvent(
+    return _evenement(
       xpDelta: restitue,
       categoryId: habit.categoryId,
-      leveledUp: false,
-      newLevel: _levelOfCategory(habit.categoryId),
+      avant: avant,
       label: habit.title,
     );
   }
@@ -202,6 +233,54 @@ class AppController extends AsyncNotifier<AppData> {
     final categorie = _data.categoryById(categoryId);
     if (categorie == null) return 1;
     return categorie.levelInfo.level;
+  }
+
+  int get _globalLevel => _data.globalLevel.level;
+
+  /// Niveaux relevés avant une mutation, pour les comparer après coup.
+  _Niveaux _releve(String categoryId) =>
+      _Niveaux(_levelOfCategory(categoryId), _globalLevel);
+
+  /// Construit le compte rendu d'une mutation d'XP.
+  ///
+  /// Passe par ici tout ce qui touche à l'XP : c'est le seul endroit qui sache
+  /// comparer les niveaux d'avant et d'après, sur la catégorie comme sur le
+  /// tronc, et en déduire les récompenses tombées.
+  XpEvent _evenement({
+    required int xpDelta,
+    required String categoryId,
+    required _Niveaux avant,
+    String label = '',
+  }) {
+    final categorie = _levelOfCategory(categoryId);
+    final global = _globalLevel;
+
+    return XpEvent(
+      xpDelta: xpDelta,
+      categoryId: categoryId,
+      leveledUp: categorie > avant.categorie,
+      newLevel: categorie,
+      previousLevel: avant.categorie,
+      globalLevel: global,
+      previousGlobalLevel: avant.global,
+      label: label,
+      unlocked: [
+        ..._crossed(categoryId, avant.categorie, categorie),
+        ..._crossed(null, avant.global, global),
+      ]..sort((a, b) => a.level.compareTo(b.level)),
+    );
+  }
+
+  /// Récompenses franchies sur une branche entre deux niveaux.
+  ///
+  /// Bornes ouvertes à gauche : rester au même niveau ne débloque rien, et
+  /// redescendre — une pénalité peut faire perdre un palier — non plus.
+  List<Reward> _crossed(String? categoryId, int avant, int apres) {
+    if (apres <= avant) return const [];
+    return _data
+        .rewardsFor(categoryId)
+        .where((r) => r.level > avant && r.level <= apres)
+        .toList();
   }
 
   // ---------------------------------------------------------------- Habitudes
@@ -379,7 +458,7 @@ class AppController extends AsyncNotifier<AppData> {
 
     final desormaisFaite = !etape.done;
     final delta = desormaisFaite ? Milestone.xpReward : -Milestone.xpReward;
-    final avant = _levelOfCategory(objectif.categoryId);
+    final avant = _releve(objectif.categoryId);
 
     await _mutate((data) {
       final maj = objectif.copyWith(
@@ -403,12 +482,10 @@ class AppController extends AsyncNotifier<AppData> {
       return _addXp(avecObjectif, objectif.categoryId, delta);
     });
 
-    final apres = _levelOfCategory(objectif.categoryId);
-    return XpEvent(
+    return _evenement(
       xpDelta: delta,
       categoryId: objectif.categoryId,
-      leveledUp: apres > avant,
-      newLevel: apres,
+      avant: avant,
       label: etape.title,
     );
   }
@@ -420,7 +497,7 @@ class AppController extends AsyncNotifier<AppData> {
 
     final desormaisFini = !objectif.isCompleted;
     final delta = desormaisFini ? objectif.xpReward : -objectif.xpReward;
-    final avant = _levelOfCategory(objectif.categoryId);
+    final avant = _releve(objectif.categoryId);
 
     await _mutate((data) {
       final maj = desormaisFini
@@ -435,12 +512,10 @@ class AppController extends AsyncNotifier<AppData> {
       return _addXp(avecObjectif, objectif.categoryId, delta);
     });
 
-    final apres = _levelOfCategory(objectif.categoryId);
-    return XpEvent(
+    return _evenement(
       xpDelta: delta,
       categoryId: objectif.categoryId,
-      leveledUp: apres > avant,
-      newLevel: apres,
+      avant: avant,
       label: objectif.title,
     );
   }
@@ -529,5 +604,74 @@ class AppController extends AsyncNotifier<AppData> {
   /// Repart de zéro avec les catégories et exemples d'origine.
   Future<void> resetAll() async {
     await _mutate((_) => buildSeedData());
+  }
+
+  // ------------------------------------------------------------ Récompenses
+
+  /// Pose une récompense sur un palier, ou remplace celle qui s'y trouvait.
+  ///
+  /// Un palier ne porte qu'une récompense : deux textes sur le même nœud de
+  /// l'arbre n'auraient pas de sens visuel, et l'écriture remplace donc.
+  Future<void> setReward({
+    required String? categoryId,
+    required int level,
+    required String title,
+  }) async {
+    final propre = title.trim();
+    if (propre.isEmpty || level < 2) return;
+
+    await _mutate((data) {
+      final existante = data.rewards
+          .where((r) => r.categoryId == categoryId && r.level == level)
+          .firstOrNull;
+
+      return data.copyWith(
+        rewards: [
+          for (final r in data.rewards)
+            if (!(r.categoryId == categoryId && r.level == level)) r,
+          // Réécrire conserve l'identifiant et l'éventuelle date de dégustation :
+          // corriger une faute de frappe ne doit pas « rendre » la récompense.
+          existante?.copyWith(title: propre) ??
+              Reward(
+                id: _uuid.v4(),
+                level: level,
+                title: propre,
+                categoryId: categoryId,
+              ),
+        ],
+      );
+    });
+  }
+
+  Future<void> removeReward(String rewardId) async {
+    await _mutate(
+      (data) => data.copyWith(
+        rewards: data.rewards.where((r) => r.id != rewardId).toList(),
+      ),
+    );
+  }
+
+  /// Marque une récompense comme savourée, ou revient sur ce marquage.
+  ///
+  /// Sans effet tant que le palier n'est pas atteint : on ne consomme pas une
+  /// récompense qu'on n'a pas méritée.
+  Future<void> toggleRewardClaimed(String rewardId) async {
+    await _mutate((data) {
+      final cible = data.rewards.where((r) => r.id == rewardId).firstOrNull;
+      if (cible == null) return data;
+      if (!cible.unlockedAt(data.levelOfBranch(cible.categoryId))) return data;
+
+      return data.copyWith(
+        rewards: [
+          for (final r in data.rewards)
+            if (r.id == rewardId)
+              r.claimed
+                  ? r.copyWith(clearClaimedAt: true)
+                  : r.copyWith(claimedAt: DateTime.now())
+            else
+              r,
+        ],
+      );
+    });
   }
 }

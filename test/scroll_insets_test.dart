@@ -158,6 +158,7 @@ void main() {
       'Habitudes',
       'Objectifs',
       'Progression',
+      'Arbre',
       'Profil',
     ]) {
       testWidgets('l\'onglet $onglet se déroule jusqu\'au bout', (

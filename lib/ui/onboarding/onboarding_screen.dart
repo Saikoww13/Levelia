@@ -58,6 +58,15 @@ const List<_Slide> _slides = [
         'après jour. Ce que tu délaisses se voit autant que ce que tu tiens.',
   ),
   _Slide(
+    icon: CupertinoIcons.sparkles,
+    color: AppTheme.streak,
+    title: 'Arbre',
+    body:
+        'Une branche par domaine, plus celle de ton niveau global. Accroche '
+        'une récompense au palier de ton choix : en l\'atteignant, tu te '
+        'l\'accordes.',
+  ),
+  _Slide(
     icon: CupertinoIcons.person_fill,
     color: AppTheme.missed,
     title: 'Profil',
@@ -69,7 +78,7 @@ const List<_Slide> _slides = [
 
 /// Introduction affichée au tout premier lancement.
 ///
-/// Sept écrans : un salut, les cinq onglets, puis la création du premier
+/// Huit écrans : un salut, les six onglets, puis la création du premier
 /// domaine et de la première habitude. « Passer » est disponible partout : une
 /// introduction qu'on ne peut pas quitter est une introduction subie.
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -83,8 +92,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pages = PageController();
   int _page = 0;
 
-  /// Nombre total d'écrans : salut + explications + création.
-  static const int _total = 1 + 5 + 1;
+  /// Nombre total d'écrans : le salut, une explication par onglet, la création.
+  ///
+  /// Déduit de [_slides] plutôt que recopié : un onglet ajouté à la liste doit
+  /// suffire, sans quoi le dernier écran perd son bouton et les points de
+  /// pagination mentent.
+  static int get _total => _slides.length + 2;
 
   @override
   void dispose() {

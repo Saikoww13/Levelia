@@ -5,6 +5,7 @@ import 'category.dart';
 import 'goal.dart';
 import 'habit.dart';
 import 'habit_log.dart';
+import 'reward.dart';
 
 /// Préférence d'apparence de l'application.
 ///
@@ -42,6 +43,7 @@ class AppData {
     this.habits = const [],
     this.logs = const {},
     this.goals = const [],
+    this.rewards = const [],
     this.updatedAt,
   });
 
@@ -72,7 +74,32 @@ class AppData {
   final Map<String, HabitLog> logs;
 
   final List<Goal> goals;
+
+  /// Récompenses posées sur les paliers de l'arbre de compétences.
+  final List<Reward> rewards;
+
   final DateTime? updatedAt;
+
+  /// Récompenses d'une branche, triées par palier.
+  ///
+  /// [categoryId] vaut `null` pour la branche globale — ce n'est pas
+  /// « toutes les branches » mais bien le tronc.
+  List<Reward> rewardsFor(String? categoryId) =>
+      rewards.where((r) => r.categoryId == categoryId).toList()
+        ..sort((a, b) => a.level.compareTo(b.level));
+
+  /// Niveau atteint sur une branche, le tronc pour `null`.
+  int levelOfBranch(String? categoryId) => categoryId == null
+      ? globalLevel.level
+      : (categoryById(categoryId)?.levelInfo.level ?? 1);
+
+  /// Récompenses débloquées mais pas encore savourées, toutes branches
+  /// confondues. C'est ce qui mérite une pastille dans l'interface.
+  List<Reward> get rewardsWaiting =>
+      rewards
+          .where((r) => !r.claimed && r.unlockedAt(levelOfBranch(r.categoryId)))
+          .toList()
+        ..sort((a, b) => a.level.compareTo(b.level));
 
   /// XP totale : la somme des cagnottes de chaque catégorie.
   int get totalXp => categories.fold(0, (somme, c) => somme + c.xp);
@@ -134,6 +161,7 @@ class AppData {
     List<Habit>? habits,
     Map<String, HabitLog>? logs,
     List<Goal>? goals,
+    List<Reward>? rewards,
     DateTime? updatedAt,
   }) {
     return AppData(
@@ -147,6 +175,7 @@ class AppData {
       habits: habits ?? this.habits,
       logs: logs ?? this.logs,
       goals: goals ?? this.goals,
+      rewards: rewards ?? this.rewards,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -160,6 +189,7 @@ class AppData {
     'habits': habits.map((h) => h.toJson()).toList(),
     'logs': logs.values.map((l) => l.toJson()).toList(),
     'goals': goals.map((g) => g.toJson()).toList(),
+    'rewards': rewards.map((r) => r.toJson()).toList(),
     'updatedAt': (updatedAt ?? DateTime.now()).toIso8601String(),
   };
 
@@ -186,6 +216,11 @@ class AppData {
       logs: logs,
       goals: ((json['goals'] as List?) ?? const [])
           .map((e) => Goal.fromJson((e as Map).cast<String, dynamic>()))
+          .toList(),
+      // Ajout tardif : une sauvegarde antérieure n'a pas cette clé et se
+      // relit donc avec un arbre sans récompense, ce qui est correct.
+      rewards: ((json['rewards'] as List?) ?? const [])
+          .map((e) => Reward.fromJson((e as Map).cast<String, dynamic>()))
           .toList(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
